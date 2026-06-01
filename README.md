@@ -5,20 +5,26 @@ A programming language with morphic syntax mapping, implemented entirely in Rust
 ## 🏗️ Architecture
 
 ```
-examples/                # Code snippets and example scripts written in the custom language
+examples/                # Code snippets and example scripts (.chm / crab-style 🦀)
 src/
-├── main.rs              # Entry point of the application
-├── lib.rs               # Main orchestration pipeline
-├── dialect.rs           # Core dictionary configurations for hot-swappable syntax
-├── frontend/            # Frontend interprenter module (Lexer, Parser, and AST)
-│   ├── mod.rs           # Frontend submodule declarations
-│   ├── token.rs         # Strongly-typed Lexer tokens and operators
-│   ├── lexer.rs         # Tokenizer: converts raw source strings into Vec<Token<'a>>
-│   ├── ast.rs           # Abstract Syntax Tree structures and math evaluation logic
-│   └── parser.rs        # Pratt Parser engine: converts Vec<Token<'a>> into Vec<Statement<'a>>
+├── main.rs              # App entry point: reads files, catches global errors, and prints them
+├── lib.rs               # Orchestrator pipeline: Lexer -> Parser -> Interpreter
+├── dialect.rs           # Core keyword dictionaries (Chameleon, Crab-Style definitions)
+├── diagnostic/          # Interprenter diagnostics & reporting
+│   ├── mod.rs           
+│   └── errors.rs        # ErrorHandler struct, ErrorKind enum, and Display formatting
+├── frontend/            # Source code analysis module
+│   ├── mod.rs           
+│   ├── token.rs         # Lexer tokens and SpannedToken (token + line)
+│   ├── lexer.rs         # converts raw source strings into Vec<Token<'a>>
+│   ├── ast.rs           # Abstract Syntax Tree structures and SpannedStatement
+│   └── parser.rs        # Pratt Parser engine: returns Result<Vec<SpannedStatement>, ErrorHandler>
+├── io/
+│   ├── mod.rs
+|   └── scanner.rs       # Scan dirs for files with base .bsa and read
 └── runtime/             # Core execution engine
-    ├── mod.rs           # Runtime submodule declarations
-    └── interpreter.rs   # Iterates through Vec<Statement<'a>> via optimized index lookups
+    ├── mod.rs           
+    └── interpreter.rs   # Walks the Vec<SpannedStatement>, generating ErrorKind::Runtime
 ```
 
 ## 🛠️ Getting Started

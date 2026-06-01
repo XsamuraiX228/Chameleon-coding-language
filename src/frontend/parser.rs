@@ -335,7 +335,7 @@ impl<'a> Parser<'a> {
     }
 
 
-    // Expr_bp used for calculate math expressions in code
+    // Expr_bp used for calculating math expressions in code
     // e.g LET X = 5 + (9 * 6)^2
     pub fn expr_bp(&mut self, min_bp: u8) -> Result<Expression<'a>, ErrorHandler> {
         let mut lhs = match self.next() {
