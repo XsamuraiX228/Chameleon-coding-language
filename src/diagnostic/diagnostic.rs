@@ -5,19 +5,19 @@ pub enum ErrorKind {
     Runtime,
 } 
 
-pub struct ErrorHandler<'a> {
+pub struct ErrorHandler {
     err_type: ErrorKind,
-    error: &'a str,
+    error: String,
     line: usize,
 }
 
-impl<'a> ErrorHandler<'a> {
-    pub fn new(err_type: ErrorKind, error: &'a str, line: usize) -> Self {
+impl ErrorHandler {
+    pub fn new(err_type: ErrorKind, error: String, line: usize) -> Self {
         Self {err_type, error, line}
     }
 }
 
-impl<'a> fmt::Display for ErrorHandler<'a> {
+impl fmt::Display for ErrorHandler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let prefix = match self.err_type {
             ErrorKind::Lexical => "Lexical Error",

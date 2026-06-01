@@ -1,4 +1,4 @@
-#mode "ENGLISH"
-LET X = 10
-LET Y = X * 10 + (78^2)
-PRINT Y
+#mode "CRAB"
+🦀 X = 2
+🦀 Y = -X ! ^ 3 + ( 100 / (5 - 3) ) % 3
+📢 Y

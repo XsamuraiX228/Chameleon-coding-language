@@ -16,12 +16,12 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(input: &'a str, config: &'a SyntaxDict) -> Self {
+    pub fn new(input: &'a str, config: &'a SyntaxDict, number: usize) -> Self {
         Self {
             input: input,
             pos: 0,
             config,
-            current_line: 1
+            current_line: number
         }
     }
 

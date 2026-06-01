@@ -262,4 +262,13 @@ impl SyntaxDict {
             _ => Self::default_english(),
         }
     }
+
+    pub fn get_kw_word(&self, name_of_kw: KeyWordType) -> String {
+        for (string_name, kw_type) in &self.keywords {
+            if *kw_type == name_of_kw {
+                return string_name.clone();
+            }
+        }
+        format!("{:?}", name_of_kw)
+    } 
 }

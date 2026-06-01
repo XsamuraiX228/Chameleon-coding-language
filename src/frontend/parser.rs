@@ -4,16 +4,18 @@ use crate::frontend::token::KeyWordType;
 use crate::diagnostic::diagnostic::{ErrorHandler, ErrorKind};
 use super::token::{Token, CmpOp, OpType, Literal};
 use super::ast::Expression;
+use crate::dialect::SyntaxDict;
 pub struct Parser<'a> {
     tokens: Vec<SpannedToken<'a>>,
     pub current_line: usize,
+    dialect: &'a SyntaxDict
 }
 
 impl<'a> Parser<'a> {
 
     // Create Parser
-    pub fn new(tokens: Vec<SpannedToken<'a>>, ) -> Self {
-        Self {tokens, current_line: 1}
+    pub fn new(tokens: Vec<SpannedToken<'a>>, dialect: &'a SyntaxDict ) -> Self {
+        Self {tokens, current_line: 1, dialect}
     }
 
     // Functions peek is used to look at the token and check it
@@ -28,31 +30,37 @@ impl<'a> Parser<'a> {
         Some(spanned.token)
     }
 
-    // Help function to generate error messages
-    fn error(&self, message: &'a str) -> ErrorHandler<'a> {
+    // Help function to generate error messages for statements like (IF, FOR, WHILE and etc.)
+    fn hard_error(&self, error_kw: String, kw_type: String) -> ErrorHandler{
+        let message = format!("Expected '{}' after {} block", error_kw, kw_type);
         ErrorHandler::new(ErrorKind::Syntax, message, self.current_line)
     }
 
+    // Help function to generate error messages for simple statements
+    fn easy_error(&self, context: String) -> ErrorHandler {
+        ErrorHandler::new(ErrorKind::Syntax, context, self.current_line)
+    }
+
     // Name getter
-    fn get_name(&mut self) -> Result<&'a str, ErrorHandler<'a>> {
+    fn get_name(&mut self) -> Result<&'a str, ErrorHandler> {
         match self.next() {
             Some(Token::Literal(Literal::Ident(name))) => Ok(name),
-            _ => Err(self.error("Expected variable name")),
+            _ => Err(self.easy_error("Expected variable name".to_string())),
         }
     }
 
     // Num getter
-    fn get_num(&mut self) -> Result<i64, ErrorHandler<'a>> {
+    fn get_num(&mut self) -> Result<i64, ErrorHandler> {
         match self.next() {
             Some(Token::Literal(Literal::Number(num))) => Ok(num),
-            _ => Err(self.error("Expected number")),
+            _ =>Err(self.easy_error("Expected num".to_string())),
         }
     }
 
 
     // Parse_block is use to parse a block of code
     // While, for and if use this function to parse commands inside them
-    fn parse_block(&mut self, stop_tokens: &[Token<'a>]) -> Result<Vec<Statement<'a>>, ErrorHandler<'a>> {
+    fn parse_block(&mut self, stop_tokens: &[Token<'a>]) -> Result<Vec<Statement<'a>>, ErrorHandler> {
         let mut block_of_commads = Vec::new();
         while let Some(token) = self.peek() {
             if stop_tokens.iter().any(|t| t == token) {
@@ -73,7 +81,7 @@ impl<'a> Parser<'a> {
     }
 
     // Parse the Vec<Token<'a>>
-    pub fn parse(&mut self) -> Result<Vec<Statement<'a>>, ErrorHandler<'a>> {
+    pub fn parse(&mut self) -> Result<Vec<Statement<'a>>, ErrorHandler> {
         let mut commands = Vec::new();
         while let Some(token) = self.peek() {
             match token {
@@ -92,8 +100,8 @@ impl<'a> Parser<'a> {
     }
 
     // Parse one command at time
-    fn parse_command(&mut self) -> Result<Statement<'a>, ErrorHandler<'a>> {
-        let current_token = self.next().ok_or_else(|| self.error("Unexpected end of file, expected command"))?;
+    fn parse_command(&mut self) -> Result<Statement<'a>, ErrorHandler> {
+        let current_token = self.next().ok_or_else(|| self.easy_error("Unexpected end of file, expected command".to_string()))?;
         match current_token {
             Token::KeyWord(KeyWordType::Let) => self.parse_let(),
             Token::KeyWord(KeyWordType::Print) => self.parse_print(),
@@ -112,19 +120,22 @@ impl<'a> Parser<'a> {
             Token::KeyWord(KeyWordType::While) => self.parse_while(),
             Token::KeyWord(KeyWordType::For) => self.parse_for(),
             Token::KeyWord(KeyWordType::Else) => {
-                Err(self.error("Unexpected ELSE outside of IF block"))
+                let error_kw = self.dialect.get_kw_word(KeyWordType::Else);
+                let kw_type = self.dialect.get_kw_word(KeyWordType::If);
+                Err(self.hard_error(error_kw, kw_type))
             }
-            _ => Err(self.error("Unexpected command token")),
+            _ => Err(self.easy_error("Unexpected command token".to_string())),
         }
     }
     
-    fn parse_let(&mut self) -> Result<Statement<'a>, ErrorHandler<'a>> {
+    fn parse_let(&mut self) -> Result<Statement<'a>, ErrorHandler> {
         // get variable name
         let name = self.get_name()?;
 
         // check if = exist
         if self.next() != Some(Token::CmpOp(CmpOp::Equal)) {
-            return Err(self.error("Expected '=' after variable name in LET"));
+            let kw_type = self.dialect.get_kw_word(KeyWordType::Let);
+            return Err(self.hard_error("=".to_string(), kw_type));
         }
 
         // get the value, which will be stored in hashmap
@@ -132,7 +143,7 @@ impl<'a> Parser<'a> {
         Ok(Statement::Assign { name, value })
     }
 
-    fn parse_print(&mut self) -> Result<Statement<'a>, ErrorHandler<'a>> {
+    fn parse_print(&mut self) -> Result<Statement<'a>, ErrorHandler> {
         let statement = match self.next() {
             Some(Token::Literal(Literal::Text(text))) => {
                 if let Some(Token::Semicolon) = self.peek() {
@@ -150,12 +161,12 @@ impl<'a> Parser<'a> {
                     Statement::PrintVar(name, true)
                 }
             }
-            _ => return Err(self.error("Expected string or variable after PRINT")),
+            _ => return Err(self.easy_error("Expected string or variable after PRINT".to_string())),
         };
         Ok(statement)
     }
 
-    fn parse_if(&mut self) -> Result<Statement<'a>, ErrorHandler<'a>> {
+    fn parse_if(&mut self) -> Result<Statement<'a>, ErrorHandler> {
         // get left expression
         let left_value = self.expr_bp(0)?;
         
@@ -177,11 +188,9 @@ impl<'a> Parser<'a> {
         
         // check if keyword THEN exist
         if self.next() != Some(Token::KeyWord(KeyWordType::Then)) {
-            return Err(ErrorHandler::new(
-                ErrorKind::Syntax,
-                "Expected 'THEN' after IF condition",
-                self.current_line
-            ));
+            let error_kw = self.dialect.get_kw_word(KeyWordType::Then);
+            let kw_type = self.dialect.get_kw_word(KeyWordType::If);
+            return Err(self.hard_error(error_kw, kw_type));
         }
        
         // Skip \n
@@ -217,7 +226,9 @@ impl<'a> Parser<'a> {
 
         
         if self.next() != Some(Token::KeyWord(KeyWordType::End)) {
-            return Err(self.error("Expected END after IF block"));
+            let error_kw = self.dialect.get_kw_word(KeyWordType::End);
+            let kw_type = self.dialect.get_kw_word(KeyWordType::If);
+            return Err(self.hard_error(error_kw, kw_type));
         }
         
         
@@ -235,7 +246,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_while(&mut self) -> Result<Statement<'a>, ErrorHandler<'a>> {
+    fn parse_while(&mut self) -> Result<Statement<'a>, ErrorHandler> {
         // get left expression
         let left_value = self.expr_bp(0)?;
 
@@ -248,14 +259,16 @@ impl<'a> Parser<'a> {
             Some(Token::CmpOp(CmpOp::Greater)) => ">",
             Some(Token::CmpOp(CmpOp::LessEqual)) => "<=",
             Some(Token::CmpOp(CmpOp::GreaterEqual)) => ">=",
-            _ => return Err(self.error("Expected comparison operator in WHILE condition")),
+            _ => return Err(self.easy_error("Expected comparison operator in WHILE condition".to_string())),
         };
 
         // get right expression
         let right_value = self.expr_bp(0)?;
 
         if self.next() != Some(Token::KeyWord(KeyWordType::Then)) {
-            return Err(self.error("Expected block THEN"));
+            let error_kw = self.dialect.get_kw_word(KeyWordType::Then);
+            let kw_type = self.dialect.get_kw_word(KeyWordType::While);
+            return Err(self.hard_error(error_kw, kw_type));
         }
 
         if let Some(Token::Newline) = self.peek() {
@@ -268,20 +281,18 @@ impl<'a> Parser<'a> {
         Ok(Statement::While { left_value, cmp, right_value, block })
     }
 
-    fn parse_for(&mut self) -> Result<Statement<'a>, ErrorHandler<'a>> {
+    fn parse_for(&mut self) -> Result<Statement<'a>, ErrorHandler> {
         let variable = self.get_name()?;
-
         if self.next() != Some(Token::CmpOp(CmpOp::Equal)) {
-            return Err(self.error("Expected operator = "));
+            return Err(self.easy_error("Expected operator =".to_string()));
         }
-
         let start_idx = self.get_num()?;
 
         if self.next() != Some(Token::KeyWord(KeyWordType::To)) {
-            return Err(self.error("Expected 'TO' keyword in FOR loop"));
+            let error_kw = self.dialect.get_kw_word(KeyWordType::To);
+            let kw_type = self.dialect.get_kw_word(KeyWordType::For);
+            return Err(self.hard_error(error_kw, kw_type));
         }
-
-        self.next(); // Consume TO
         let end_idx = self.get_num()?;
 
         let step = if let Some(Token::KeyWord(KeyWordType::Step)) = self.peek() {
@@ -312,7 +323,7 @@ impl<'a> Parser<'a> {
             step, })
     }
 
-    fn parse_random(&mut self) -> Result<Statement<'a>, ErrorHandler<'a>> {
+    fn parse_random(&mut self) -> Result<Statement<'a>, ErrorHandler> {
         // get name of varibale
         let name = self.get_name()?;
         
@@ -326,13 +337,13 @@ impl<'a> Parser<'a> {
 
     // Expr_bp used for calculate math expressions in code
     // e.g LET X = 5 + (9 * 6)^2
-    pub fn expr_bp(&mut self, min_bp: u8) -> Result<Expression<'a>, ErrorHandler<'a>> {
+    pub fn expr_bp(&mut self, min_bp: u8) -> Result<Expression<'a>, ErrorHandler> {
         let mut lhs = match self.next() {
             Some(Token::Literal(Literal::Number(num))) => Expression::Atom(num),
             Some(Token::OpType(OpType::LParen)) => {
                 let lhs = self.expr_bp(0)?;
                 if self.next() != Some(Token::OpType(OpType::RParen)) {
-                    return Err(self.error("Expected matching ')'"));
+                    return Err(self.easy_error("Expected matching ')'".to_string()));
                 }
                 lhs
             }
@@ -340,17 +351,17 @@ impl<'a> Parser<'a> {
                 match op_type {
                     OpType::Plus | OpType::Minus => {
                         let prefix_bp = self.prefix_bind_operator(op_type)
-                            .map_err(|err_msg| self.error(err_msg))?;
+                            .map_err(|err_msg| self.easy_error(err_msg.to_string()))?;
                         
                         let rhs = self.expr_bp(prefix_bp)?;
                         Expression::UnCons(op_type, Box::new(rhs))
                     }
-                    _ => return Err(self.error("Unexpected operator inside expression")),
+                    _ => return Err(self.easy_error("Unexpected operator inside expression".to_string())),
                 }
             }
             Some(Token::Literal(Literal::Ident(name))) => Expression::Variable(name),
-            Some(Token::Literal(Literal::Text(_))) => return Err(self.error("Strings are not allowed in math expressions")),
-            _ => return Err(self.error("Expected number, variable or prefix operator")),
+            Some(Token::Literal(Literal::Text(_))) => return Err(self.easy_error("Strings are not allowed in math expressions".to_string())),
+            _ => return Err(self.easy_error("Expected number, variable or prefix operator".to_string())),
         }; 
 
         loop {

@@ -16,11 +16,11 @@ pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
     
     // Variable-pointer to the part of the parsing code
     let mut code_to_parse = raw_code;
-
+    let mut line_counter = 1;
     if let Some(first_line) = raw_code.lines().next() {
         let trimmed = first_line.trim();
-        
         if trimmed.starts_with("#mode") {
+            line_counter += 1;
             if let (Some(start_quote), Some(end_quote)) = (trimmed.find('"'), trimmed.rfind('"')) {
                 if start_quote != end_quote {
                     let dict_name = &trimmed[start_quote + 1..end_quote]; 
@@ -35,10 +35,10 @@ pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
     }
 
     // 2. Create lexer
-    let mut lexer = Lexer::new(code_to_parse, &config);
+    let mut lexer = Lexer::new(code_to_parse, &config, line_counter);
     let tokens = lexer.tokenize();
     // 3. Create parser
-    let mut parser = Parser::new(tokens);
+    let mut parser = Parser::new(tokens, &config);
     // 4. Create interprenter
     let mut interpreter = Interpreter::new();
     match parser.parse() {
