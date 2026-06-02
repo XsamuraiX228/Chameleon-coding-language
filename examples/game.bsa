@@ -1,16 +1,17 @@
 #mode "ENGLISH"
-LET X = 1
-WHILE X <= 10 THEN
-    IF X % 2 == 0 THEN
-        PRINT X
-        PRINT " is even"
-    ELSE
-        PRINT X
-        PRINT " is odd"
-    END
-    IF X == 5 THEN
-        PRINT "Halfway there!"
-    END
-    LET X = X + 1
+LET X = 10
+INPUT Y
+IF X >= Y THEN
+    PRINT X
+ELSE
+    PRINT Y
+END
+
+WHILE X <= 100 THEN
+    PRINT X
+    LET X = X + 10
 WEND
-PRINT "Done!"
+
+FOR START = 10 TO Y
+    PRINT X
+NEXT

@@ -286,6 +286,7 @@ impl<'a> Parser<'a> {
 
     fn parse_for(&mut self) -> Result<Statement<'a>, ErrorHandler> {
         let variable = self.get_name()?;
+        
         if self.next() != Some(Token::CmpOp(CmpOp::Equal)) {
             return Err(self.easy_error("Expected operator =".to_string()));
         }
