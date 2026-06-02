@@ -58,6 +58,8 @@ pub enum Token<'a> {
     Mark(&'a str), // e.g :loop 
     Semicolon,
     Newline, // \n
+    EOF,
+    Unexpected(char),
 }
 
 // token.rs
@@ -134,6 +136,8 @@ impl<'a> fmt::Display for Token<'a> {
             Token::Mark(name) => write!(f, "Mark(:{})", name),
             Token::Newline => write!(f, "Newline"),
             Token::Semicolon => write!(f, "Semicolon"),
+            Token::EOF => write!(f, "EOF"),
+            Token::Unexpected(ch) => write!(f, "Token(:{})", ch)
         }
     }
 }

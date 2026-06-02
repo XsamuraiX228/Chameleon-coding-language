@@ -172,12 +172,14 @@ impl<'a> Interpreter<'a> {
 
             Statement::For { increment, start_idx, end_idx, block, step } => {
                 let cmp = if *step >= 0 {"<="} else {">="};
-                self.env.set(increment, *start_idx);
+                let start = start_idx.evaluate(&self.env.map)?;
+                let end = end_idx.evaluate(&self.env.map)?;
+                self.env.set(increment, start);
                 loop {
                     let i = self.env.get(increment)?;
                     let condition = match cmp {
-                        "<=" => i <= *end_idx,
-                        ">=" => i >= *end_idx,
+                        "<=" => i <= end,
+                        ">=" => i >= end,
                         _ => unreachable!(),
                     };
 

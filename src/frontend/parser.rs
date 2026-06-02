@@ -89,6 +89,9 @@ impl<'a> Parser<'a> {
                     self.next();
                     continue;
                 }
+                Token::EOF => {
+                    break;
+                }
                 _ => {
                     let cmd = self.parse_command()?;
                     commands.push(cmd);
@@ -286,14 +289,14 @@ impl<'a> Parser<'a> {
         if self.next() != Some(Token::CmpOp(CmpOp::Equal)) {
             return Err(self.easy_error("Expected operator =".to_string()));
         }
-        let start_idx = self.get_num()?;
+        let start_idx = self.expr_bp(0)?;
 
         if self.next() != Some(Token::KeyWord(KeyWordType::To)) {
             let error_kw = self.dialect.get_kw_word(KeyWordType::To);
             let kw_type = self.dialect.get_kw_word(KeyWordType::For);
             return Err(self.hard_error(error_kw, kw_type));
         }
-        let end_idx = self.get_num()?;
+        let end_idx = self.expr_bp(0)?;
 
         let step = if let Some(Token::KeyWord(KeyWordType::Step)) = self.peek() {
             self.next(); // Consume STEP
@@ -313,7 +316,12 @@ impl<'a> Parser<'a> {
 
         let stop_keyword = vec![Token::KeyWord(KeyWordType::Next)];
         let block = self.parse_block(&stop_keyword)?;
-        self.next(); // Consume NEXT
+        
+        if self.next() != Some(Token::KeyWord(KeyWordType::Next)) {
+            let error_kw = self.dialect.get_kw_word(KeyWordType::Next);
+            let kw_type = self.dialect.get_kw_word(KeyWordType::For);
+            return Err(self.hard_error(error_kw, kw_type));
+        }
 
         Ok(Statement::For { 
             increment: variable,

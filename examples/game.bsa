@@ -1,4 +1,16 @@
-#mode "CRAB"
-🦀 X = 2
-🦀 Y = -X ! ^ 3 + ( 100 / (5 - 3) ) % 3
-📢 Y
+#mode "ENGLISH"
+LET X = 1
+WHILE X <= 10 THEN
+    IF X % 2 == 0 THEN
+        PRINT X
+        PRINT " is even"
+    ELSE
+        PRINT X
+        PRINT " is odd"
+    END
+    IF X == 5 THEN
+        PRINT "Halfway there!"
+    END
+    LET X = X + 1
+WEND
+PRINT "Done!"

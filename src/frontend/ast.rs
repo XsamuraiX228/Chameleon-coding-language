@@ -72,7 +72,7 @@ fn factorial(mut x: i64) -> i64 {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub enum Statement<'a> {
-    Assign { name: &'a str, value: Expression<'a> }, // Assign the value to variable
+    Assign { name: &'a str, value: Expression<'a>, }, // Assign the value to variable
     Input {name: &'a str}, // Input the value
     PrintStr(&'a str, bool), // Print strings
     PrintVar(&'a str, bool), // Get value from variables and print it
@@ -83,8 +83,19 @@ pub enum Statement<'a> {
         then_block: Vec<Statement<'a>>, 
         else_block: Vec<Statement<'a>>,
     }, // If statement
-    While {left_value: Expression<'a>, cmp: &'a str, right_value: Expression<'a>, block: Vec<Statement<'a>>}, // While loop
-    For {increment: &'a str, start_idx: i64, end_idx: i64, block: Vec<Statement<'a>>, step: i64}, // For loop
+    While {
+        left_value: Expression<'a>, 
+        cmp: &'a str, 
+        right_value: Expression<'a>, 
+        block: Vec<Statement<'a>>
+    }, // While loop
+    For {
+        increment: &'a str, 
+        start_idx: Expression<'a>, 
+        end_idx: Expression<'a>, 
+        block: Vec<Statement<'a>>, 
+        step: i64
+    }, // For loop
     Label {name: &'a str}, // Mark to control the position where the GOTO will jump
     Goto {label: &'a str}, // Jump to mark in code
     Random {name:&'a str, min: i64, max: i64}, // Set random value to variable

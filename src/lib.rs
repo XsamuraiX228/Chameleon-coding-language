@@ -36,6 +36,7 @@ pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
 
     // 2. Create lexer
     let mut lexer = Lexer::new(code_to_parse, &config, line_counter);
+    // lexer.debug_tokens();
     let tokens = lexer.tokenize();
     // 3. Create parser
     let mut parser = Parser::new(tokens, &config);

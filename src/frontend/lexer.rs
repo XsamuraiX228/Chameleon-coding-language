@@ -25,24 +25,82 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn next_token(&mut self) -> Option<SpannedToken<'a>> {
+    fn skip_whitespace(&mut self) {
         let bytes = self.input.as_bytes();
-
-        while self.pos < self.input.len() && bytes[self.pos] == b' ' {
+        while self.pos < bytes.len() && (bytes[self.pos] == b' ' || bytes[self.pos] == b'\t') {
             self.pos += 1;
         }
+    }
 
-        if self.pos >= self.input.len() {
-            return None;
+    fn current_char(&self) -> Option<char> {
+       if self.pos >= self.input.len() {
+        return None;
+    }
+        // Безопасно берем следующий символ, учитывая UTF-8
+        self.input[self.pos..].chars().next()
+    }
+
+    fn next_token(&mut self) -> SpannedToken<'a> {
+        self.skip_whitespace();
+
+        if self.pos > self.input.len() {
+            return SpannedToken { token: Token::EOF, line: self.current_line };
         }
 
-        let ch = bytes[self.pos] as char;
-        let token_line = self.current_line;
+        let ch = match self.current_char() {
+            Some(c) => c,
+            None => return SpannedToken { token: Token::EOF, line: self.current_line },
+        };
+        
+        // check specila symbols \r , \n, ;
+        if let Some(spanned_newline) = self.newline_symbols(ch) {
+            return spanned_newline;
+        }
 
+        // check comparative symbols =, ==, !=, <, >, <=, >=
+        if let Some(spanned_cmp) = self.comparative_symbols(ch) {
+            return spanned_cmp;
+        }
+
+        // check math symbols in VALID_OPERATORS
+        if let Some(spanned_math) = self.math_symbols(ch) {
+            return spanned_math;
+        }
+
+        // check // symbol for comments
+        if let Some(spanned_comments) = self.comments_symbol(ch) {
+            return spanned_comments;
+        }
+
+        if let Some(spanned_num) = self.number(ch) {
+            return spanned_num;
+        }
+
+        if let Some(spanned_string) = self.string(ch) {
+            return spanned_string;
+        }
+
+        if let Some(spanned_keyword) = self.keyword(ch) {
+            return spanned_keyword;
+        }
+
+        let unexpected = SpannedToken { 
+            token: Token::Unexpected(ch), 
+            line: self.current_line 
+        };
+        
+        // Продвигаем курсор вперед, чтобы не зациклиться на ошибке
+        self.pos += ch.len_utf8(); 
+        
+        unexpected
+    }
+
+    fn newline_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+        let token_line = self.current_line;
         match ch {
-            // ==================== Newline tokens ====================
             '\r' => {
                 self.pos += 1;
+                let bytes = self.input.as_bytes();
                 if self.pos < self.input.len() && bytes[self.pos] == b'\n' {
                     self.pos += 1; // \r\n 
                 }
@@ -60,8 +118,21 @@ impl<'a> Lexer<'a> {
                     line: token_line,
                 })
             }
+            ';' => {
+                self.pos += 1;
+                Some(SpannedToken {
+                    token: Token::Semicolon,
+                    line: token_line,
+                })
+            }
+            _ => return None
+        }
+    }
 
-            // ==================== Operators ====================
+    fn comparative_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+        let token_line = self.current_line;
+        let bytes = self.input.as_bytes();
+        match ch {
             '=' => {
                 let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
                     self.pos += 2;
@@ -102,7 +173,13 @@ impl<'a> Lexer<'a> {
                 };
                 Some(SpannedToken { token, line: token_line })
             }
+            _ => return None
+        }
+    }
 
+    fn math_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+        let token_line = self.current_line;
+        match ch {
             op if VALID_OPERATORS.contains(&op) => {
                 self.pos += 1;
                 let op_type = match ch {
@@ -120,33 +197,22 @@ impl<'a> Lexer<'a> {
                     line: token_line,
                 })
             }
+            _ => return None
+        }
+    }
 
-            // ==================== Strings ====================
-            '"' => {
-                self.pos += 1;
-                let start = self.pos;
+    fn comments_symbol(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+        let token_line = self.current_line;
+        let bytes = self.input.as_bytes();
 
-                while self.pos < bytes.len() && bytes[self.pos] != b'"' {
-                    self.pos += 1;
-                }
-
-                let text_str = &self.input[start..self.pos];
-                self.pos += 1; // пропускаем закрывающую "
-
-                Some(SpannedToken {
-                    token: Token::Literal(Literal::Text(text_str)),
-                    line: token_line,
-                })
-            }
-
-            // ==================== Comments ====================
+        match ch {
             '/' => {
                 if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'/' {
                     self.pos += 2;
                     while self.pos < bytes.len() && bytes[self.pos] != b'\n' {
                         self.pos += 1;
                     }
-                    return self.next_token();
+                    return Some(self.next_token());
                 }
                 self.pos += 1;
                 Some(SpannedToken {
@@ -154,72 +220,91 @@ impl<'a> Lexer<'a> {
                     line: token_line,
                 })
             }
+            _ => return None
+        }
+    }
 
-            // ==================== Marks (:mark) ====================
+    fn number(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+        if !ch.is_ascii_digit() {
+            return None;
+        }
+
+        let token_line = self.current_line;
+        let bytes = self.input.as_bytes();
+        let start = self.pos;
+
+        while self.pos < bytes.len() && (bytes[self.pos] as char).is_ascii_digit() {
+            self.pos += 1;
+        }
+
+        let num_str = &self.input[start..self.pos];
+        let number = num_str.parse::<i64>().unwrap();
+
+        Some(SpannedToken {
+            token: Token::Literal(Literal::Number(number)),
+            line: token_line,
+        })
+    }
+
+    fn string(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+        if ch != '"' {
+            return None;
+        }
+
+        let token_line = self.current_line;
+        let bytes = self.input.as_bytes();
+        
+        self.pos += 1; 
+        let start = self.pos;
+
+        while self.pos < bytes.len() && bytes[self.pos] != b'"' {
+            self.pos += 1;
+        }
+
+        let text_str = &self.input[start..self.pos];
+        self.pos += 1; 
+
+        Some(SpannedToken {
+            token: Token::Literal(Literal::Text(text_str)),
+            line: token_line,
+        })
+    }
+
+    // Этот хелпер просто двигает pos вперед, пока идет слово
+    fn skip_until_delimiter(&mut self) {
+        let bytes = self.input.as_bytes();
+        while self.pos < bytes.len() {
+            if let Some(current_char) = self.input[self.pos..].chars().next() {
+                if current_char.is_whitespace()
+                    || current_char == '='
+                    || current_char == '!'
+                    || current_char == ';'
+                    || current_char == ':' 
+                    || VALID_OPERATORS.contains(&current_char)
+                {
+                    break;
+                }
+                self.pos += current_char.len_utf8();
+            }
+        }
+    }
+
+    fn keyword(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+        let token_line = self.current_line;
+        match ch {
             ':' => {
                 self.pos += 1;
                 let start = self.pos;
-                while self.pos < bytes.len() {
-                    if let Some(current_char) = self.input[self.pos..].chars().next() {
-                        if current_char.is_whitespace()
-                            || current_char == '='
-                            || current_char == '!'
-                            || VALID_OPERATORS.contains(&current_char)
-                        {
-                            break;
-                        }
-                        self.pos += current_char.len_utf8();
-                    }
-                }
+                self.skip_until_delimiter(); 
                 Some(SpannedToken {
                     token: Token::Mark(&self.input[start..self.pos]),
                     line: token_line,
                 })
             }
-
-            // ==================== Semicolon ====================
-            ';' => {
-                self.pos += 1;
-                Some(SpannedToken {
-                    token: Token::Semicolon,
-                    line: token_line,
-                })
-            }
-
-            // ==================== Numbers ====================
-            '0'..='9' => {
-                let start = self.pos;
-                while self.pos < bytes.len() && (bytes[self.pos] as char).is_ascii_digit() {
-                    self.pos += 1;
-                }
-                let num_str = &self.input[start..self.pos];
-                let number = num_str.parse::<i64>().unwrap();
-
-                Some(SpannedToken {
-                    token: Token::Literal(Literal::Number(number)),
-                    line: token_line,
-                })
-            }
-
-            // ==================== KeyWords and Variables ====================
             _ => {
                 let start = self.pos;
-                while self.pos < bytes.len() {
-                    if let Some(current_char) = self.input[self.pos..].chars().next() {
-                        if current_char.is_whitespace()
-                            || current_char == '='
-                            || current_char == '!'
-                            || current_char == ';'
-                            || VALID_OPERATORS.contains(&current_char)
-                        {
-                            break;
-                        }
-                        self.pos += current_char.len_utf8();
-                    }
-                }
-
+                self.skip_until_delimiter(); 
                 let word_str = &self.input[start..self.pos];
-
                 let token = if let Some(kw_type) = self.config.keywords.get(word_str) {
                     Token::KeyWord(kw_type.clone())
                 } else {
@@ -230,9 +315,17 @@ impl<'a> Lexer<'a> {
             }
         }
     }
+
+
     pub fn tokenize(&mut self) -> Vec<SpannedToken<'a>> {
         let mut tokens = Vec::new();
-        while let Some(spanned) = self.next_token() {
+
+        loop {
+            let spanned = self.next_token();
+            if let Token::EOF = spanned.token {
+                tokens.push(spanned); 
+                break;               
+            }
             tokens.push(spanned);
         }
         tokens.reverse();
