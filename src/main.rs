@@ -42,7 +42,7 @@ mod tests {
             #[test]
             fn $name() {
                 let result = run_pipeline($program);
-                assert!(result.is_ok(), "Программа должна была выполниться успешно, но упала с ошибкой: {:?}", result.err());
+                assert!(result.is_ok(), "Error: {:?}", result.err());
             }
         };
     }
@@ -52,12 +52,12 @@ mod tests {
             #[test]
             fn $name() {
                 let result = run_pipeline($program);
-                assert!(result.is_err(), "Программа должна была выбросить ошибку, но выполнилась успешно!");
+                assert!(result.is_err(), "Expected error, but program executed with succes!");
             }
         };
     }
 
-    // ==================== ТВОЙ НОВЫЙ ИНТЕГРАЦИОННЫЙ ТЕСТ ====================
+    
     test_program!(test_all_language_constructs, r#"
         #mode "ENGLISH"
         LET X = 10
@@ -80,11 +80,11 @@ mod tests {
             NEXT
     "#);
 
-    // ==================== МАТЕМАТИКА ====================
+    
     test_program!(test_math_basic, "LET X = 1 + 2 * 3");
     test_program!(test_math_parens, "LET X = (1 + 2) * 3");
 
-    // ==================== УСЛОВИЯ ====================
+    
     test_program!(test_if_then, "
         LET X = 10
         IF X > 5 THEN
@@ -100,7 +100,7 @@ mod tests {
         END
     ");
 
-    // ==================== ПЕРЕХОДЫ GOTO ====================
+    
     test_program!(test_goto_basic, "
         GOTO skip
         LET X = 1
@@ -115,12 +115,12 @@ mod tests {
         END
     ");
 
-    // ==================== RANDOM ====================
+    
     test_program!(test_random, "
         RANDOM X 1 100
     ");
 
-    // ==================== ТЕСТЫ НА ОШИБКИ ====================
+    
     test_error!(test_division_by_zero, "
         LET X = 10 / 0
     ");
@@ -131,7 +131,7 @@ mod tests {
         GOTO missing_label
     ");
 
-    // ==================== СЛОЖНЫЕ ЦИКЛЫ ====================
+    
     test_program!(test_fibonacci, "
         LET A = 0
         LET B = 1
@@ -155,10 +155,9 @@ mod tests {
             LET I = I + 1
         WEND
     ");
-    // ==================== КОМПЛЕКСНЫЕ ТЕСТЫ С ВЛОЖЕННОСТЬЮ ====================
+    
 
-    // 1. Вложенность: IF внутри WHILE
-    // Проверяет, как интерпретатор фильтрует выполнение команд на каждой итерации цикла
+    
     test_program!(test_complex_if_inside_while, r#"
         #mode "ENGLISH"
         LET COUNTER = 1
@@ -176,9 +175,7 @@ mod tests {
         WEND
     "#);
 
-    // 2. Вложенность: WHILE внутри FOR
-    // Тестирует классическую двумерную сетку (например, обход матрицы или таблицы умножения)
-    // Также здесь проверяется твоя новая фича: динамическая граница TO LIMIT
+
     test_program!(test_complex_while_inside_for, r#"
         #mode "ENGLISH"
         LET TOTAL_STEPS = 0
@@ -193,9 +190,7 @@ mod tests {
         NEXT
     "#);
 
-    // 3. Экстремальная вложенность: IF внутри WHILE, который внутри FOR
-    // Настоящий стресс-тест для дерева AST и стека интерпретатора. 
-    // Проверяет, что внутренние блоки корректно изолированы и не "протекают" наружу.
+
     test_program!(test_extreme_triple_nesting, r#"
         #mode "ENGLISH"
         LET INSANE_COUNTER = 0
@@ -215,9 +210,7 @@ mod tests {
         NEXT
     "#);
 
-    // 4. Комбинация: Математический полигон Пратта внутри вложенного IF
-    // Проверяет, что сложные выражения со скобками и приоритетами (включая факториал!) 
-    // без проблем парсятся и вычисляются внутри глубоких условных веток.
+
     test_program!(test_pratt_math_inside_deep_nested_if, r#"
         #mode "ENGLISH"
         LET STATUS = 0
@@ -232,9 +225,7 @@ mod tests {
         END
     "#);
 
-    // 5. Вложенный GOTO-Escape из цикла FOR
-    // Важнейший тест на логику меток: мы находимся внутри IF, который внутри FOR. 
-    // Программа должна успешно совершить прыжок наружу, прервав выполнение цикла.
+
     test_program!(test_nested_goto_escape_from_for, r#"
         #mode "ENGLISH"
         LET ESCAPED = 0
