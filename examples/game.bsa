@@ -1,17 +1,10 @@
-#mode "ENGLISH"
-LET X = 10
-INPUT Y
-IF X >= Y THEN
-    PRINT X
-ELSE
-    PRINT Y
-END
+#mode "JAPANESE"
+代入 合計 = 0
+代入 合 = 1
 
-WHILE X <= 100 THEN
-    PRINT X
-    LET X = X + 10
-WEND
+間 合 <= 10000000 ならば
+    代入 合計 = 合計 + 合
+    代入 合 = 合 + 1
+繰り返す
 
-FOR START = 10 TO Y
-    PRINT X
-NEXT
+表示 合計

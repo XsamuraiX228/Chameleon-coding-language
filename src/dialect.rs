@@ -251,6 +251,35 @@ impl SyntaxDict {
         Self { keywords }
     }
 
+    fn kumir_style() -> Self {
+        let mut keywords = HashMap::new();
+        
+        // Переменные и операции
+        keywords.insert("знач".to_string(), KeyWordType::Let);       // Вместо LET (или "присвоить")
+        keywords.insert("вывод".to_string(), KeyWordType::Print);    // Вместо PRINT
+        keywords.insert("ввод".to_string(), KeyWordType::Input);     // Вместо INPUT
+        
+        // Условия
+        keywords.insert("если".to_string(), KeyWordType::If);        // Вместо IF
+        keywords.insert("то".to_string(), KeyWordType::Then);        // Вместо THEN
+        keywords.insert("иначе".to_string(), KeyWordType::Else);     // Вместо ELSE
+        
+        // Циклы
+        keywords.insert("нц_пока".to_string(), KeyWordType::While);  // Начало цикла пока (WHILE)
+        keywords.insert("кц".to_string(), KeyWordType::Wend);        // Конец цикла (WEND)
+        keywords.insert("нц_для".to_string(), KeyWordType::For);     // Начало цикла для (FOR)
+        keywords.insert("до".to_string(), KeyWordType::To);          // До (TO)
+        keywords.insert("шаг".to_string(), KeyWordType::Step);       // Шаг (STEP)
+        keywords.insert("кц_для".to_string(), KeyWordType::Next);    // Конец цикла для (NEXT)
+        
+        // Переходы и утилиты
+        keywords.insert("переход".to_string(), KeyWordType::Goto);   // Вместо GOTO
+        keywords.insert("случайное".to_string(), KeyWordType::Random); // Вместо RANDOM
+        keywords.insert("все".to_string(), KeyWordType::End);        // Конец условия (END в Кумире — это "все")
+        
+        Self { keywords }
+    }
+
     pub fn get_dict(name_of_dict: &str) -> SyntaxDict {
         match name_of_dict {
             "RUSSIAN" => Self::russian_style(),
@@ -259,6 +288,7 @@ impl SyntaxDict {
             "JAPANESE" => Self::japanese_style(),
             "ELF" => Self::elf_style(),
             "MIX" => Self::mix_style(),
+            "KUMIR" => Self::kumir_style(),
             _ => Self::default_english(),
         }
     }
