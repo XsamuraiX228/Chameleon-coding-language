@@ -3,7 +3,7 @@ use basic_lexer::{io::scanner::{
     scan_code,}, 
     // run_pipeline,
     run_rvmpipeline,
-    fair_benchmark,
+    // fair_benchmark,
 };
 
 
@@ -35,6 +35,7 @@ fn main() -> Result<(), String> {
 
     // run_pipeline(&code)?;
     run_rvmpipeline(&code)?;
+    // fair_benchmark();
     Ok(())
 }
 

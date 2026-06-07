@@ -7,18 +7,18 @@ use crate::dialect::SyntaxDict;
 use std::vec::IntoIter;
 use std::iter::Peekable;
 
-#[repr(u16)]
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpCode {
-    // === Системные команды ===
+    // === Syste, ===
     Stop        = 0x00,
 
-    // === Работа с памятью ===
+    // === Memory ===
     LoadConst   = 0x01,
     LoadVar     = 0x02,
     StoreVar    = 0x03,
 
-    // === Бинарная математика ===
+    // === Math ===
     Add         = 0x04,
     Sub         = 0x05,
     Mul         = 0x06,
@@ -26,10 +26,10 @@ pub enum OpCode {
     Mod         = 0x08,
     Pow         = 0x09,
 
-    // === Унарные операции ===
-    Negate      = 0x0A, // Сместился с 0x0B, закрыв дыру
+    // === Unary Operations ===
+    Negate      = 0x0A, 
 
-    // === Сравнения ===
+    // === Compare operators ===
     Equal       = 0x0B,
     NotEqual    = 0x0C,
     Greater     = 0x0D,
@@ -37,15 +37,15 @@ pub enum OpCode {
     GreaterEq   = 0x0F,
     LessEq      = 0x10,
 
-    // === Управление потоком ===
+    // === Opcodes which use for controlling the programm ===
     Jump        = 0x11,
     JumpIfFalse = 0x12,
 
-    // === Ввод/Вывод ===
+    // === Input/Output ===
     Input       = 0x13,
     Print       = 0x14,
 
-    // === Супер-опкоды (Оптимизация / Memory) ===
+    // === Superopcodes for optimizations ===
     IncVar      = 0x15,
     MovVar      = 0x16,
     JVLC        = 0x17,
@@ -55,7 +55,7 @@ pub enum OpCode {
 pub struct ByteParser<'a> {
     lexer: Peekable<IntoIter<SpannedToken<'a>>>,
     bytecode: Vec<u16>,
-    pub constants: Vec<i64>,           // ← i64
+    pub constants: Vec<i64>,       
     pub variables: Vec<&'a str>,
     current_line: usize,
     dialect: &'a SyntaxDict
@@ -83,7 +83,7 @@ impl<'a> ByteParser<'a>  {
         Some(next_token.token)
     }
 
-    fn add_constant(&mut self, value: i64) -> u8 {          // ← i64
+    fn add_constant(&mut self, value: i64) -> u8 {        
         if let Some(index) = self.constants.iter().position(|&c| c == value) {
             return index as u8;
         }
@@ -99,7 +99,7 @@ impl<'a> ByteParser<'a>  {
         (self.variables.len() - 1) as u8
     }
 
-    fn get_num(&mut self) -> Result<i64, ErrorHandler> {    // ← i64
+    fn get_num(&mut self) -> Result<i64, ErrorHandler> {    
         match self.next_token() {
             Some(Token::Literal(Literal::Number(num))) => Ok(num),
             Some(Token::OpType(OpType::Minus)) => {
@@ -147,80 +147,191 @@ impl<'a> ByteParser<'a>  {
         Err(self.hard_error(error_kw_str, context_kw_str))
     }
 
-    pub fn debug(bytecode: &Vec<u16>) {
+    pub fn debug(bytecode: &Vec<u8>) {
         println!("=== BYTECODE DUMP (16-bit) ===");
         for (index, value) in bytecode.iter().enumerate() {
             println!("{:3}: {:04X}", index, value);
-            if (index + 1) % 8 == 0 { println!(); }
+            if (index + 1) % 4 == 0 { println!(); }
         }
-        if bytecode.len() % 8 != 0 { println!(); }
+        if bytecode.len() % 4 != 0 { println!(); }
         println!("==============================");
     }
 
-    pub fn peephole_optimizer(bytecode: &Vec<u16>) -> Vec<u16> {
-        let mut optimized_bytecode = Vec::with_capacity(bytecode.len());
-        let mut idx = 0;
-        while idx  < bytecode.len() {
-            if idx + 3 < bytecode.len() {
-                let block: [u16; 4] = [
-                    bytecode[idx],
-                    bytecode[idx+1],
-                    bytecode[idx+2],
-                    bytecode[idx+3],
-                ];
-                match block {
-                    [op_1, l_idx, op_2, s_idx] if op_1 == OpCode::LoadVar as u16 && op_2 == OpCode::StoreVar as u16 => {
-                        optimized_bytecode.push(OpCode::MovVar as u16);
-                        optimized_bytecode.push(s_idx as u16);
-                        optimized_bytecode.push(l_idx as u16);
+    pub fn optimize_and_map_addresses(bytecode: &[u16]) -> (Vec<u16>, Vec<usize>) {
+        let mut optimized = Vec::with_capacity(bytecode.len());
+        
+        // Addres map
+        // We use this map to set our old_idx to new byte_idx after optimisation for JumpIfFalse and Jump Opcodes
+        let mut addr_map: Vec<usize> = vec![0; bytecode.len()];
+        
+        let mut old_idx = 0; // idx in bytecode
+        let mut byte_idx = 0; // new_idx after bytecode will be optimized
 
-                        idx += 4;
-                        continue;
+        while old_idx < bytecode.len() {
+            // Every JumpIfFalse and Jump now move to new byte_idx
+            addr_map[old_idx] = byte_idx;
+
+            // === 1. 7 opcodes pattern (IncVar) ===
+            // The goal of IncVar is to reduce the part of the code
+            // where everytime the same while is increase
+            // e.g WHILE I < 100 THEN LET I = I + 1 
+            if old_idx + 6 < bytecode.len() 
+                && bytecode[old_idx] == OpCode::LoadVar as u16 
+                && bytecode[old_idx + 2] == OpCode::LoadConst as u16
+                && bytecode[old_idx + 4] == OpCode::Add as u16
+                && bytecode[old_idx + 5] == OpCode::StoreVar as u16
+                && bytecode[old_idx + 1] == bytecode[old_idx + 6] 
+            {
+                
+                for offset in 1..7 {
+                    if old_idx + offset < bytecode.len() {
+                        addr_map[old_idx + offset] = byte_idx;
                     }
-                    _ => {}
+                }
+
+                optimized.push(OpCode::IncVar as u16);
+                optimized.push(bytecode[old_idx + 1]); // var_idx
+                optimized.push(bytecode[old_idx + 3]); // const_idx
+
+                // Calculate the size of IncVar in u8:
+                // 1 byte for op (IncVar) + 2 bytes for var_idx + 2 bytes for const_idx = 5 bytes
+                byte_idx += 5; 
+                old_idx += 7;
+                continue;
+            }
+
+            // === 2. 4 opcodes pattern (MovVar) ===
+            // The goal of MovVar is to reduce the part of the code
+            // where where a variable value is copied into another variable
+            // e.g LET X = 5 LET Y = X
+            if old_idx + 3 < bytecode.len()
+                && bytecode[old_idx] == OpCode::LoadVar as u16
+                && bytecode[old_idx + 2] == OpCode::StoreVar as u16
+            {
+                for offset in 1..4 {
+                    if old_idx + offset < bytecode.len() {
+                        addr_map[old_idx + offset] = byte_idx;
+                    }
+                }
+
+                optimized.push(OpCode::MovVar as u16);
+                optimized.push(bytecode[old_idx + 3]); // To (s_idx)
+                optimized.push(bytecode[old_idx + 1]); // From (l_idx)
+
+                // Calculate the size of MovVar in u8:
+                // 1 byte for op (MovVar) + 2 bytes for To arg + 2 bytes for From arg = 5
+                byte_idx += 5;
+                old_idx += 4;
+                continue;
+            }
+
+            // === 3. Simple instructions ===
+            let op = bytecode[old_idx];
+            optimized.push(op);
+            // We match op to know how many bytes it's weight
+            match op {
+                // Wihtout any args 1 byte
+                0x00 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x09 | 0x0A | 
+                0x0B | 0x0C | 0x0D | 0x0E | 0x0F | 0x10 | 0x14 => {
+                    byte_idx += 1;
+                    old_idx += 1;
+                }
+                // 1 op + 1 arg = 3 bytes
+                0x01 | 0x02 | 0x03 | 0x11 | 0x12 | 0x13 => {
+                    if old_idx + 1 < bytecode.len() {
+                        addr_map[old_idx + 1] = byte_idx;
+                    }
+                    
+                    if old_idx + 1 < bytecode.len() {
+                        optimized.push(bytecode[old_idx + 1]);
+                    }
+
+                    byte_idx += 3;
+                    old_idx += 2;
+                }
+                _ => {
+                    byte_idx += 1;
+                    old_idx += 1;
                 }
             }
-            if idx + 6 < bytecode.len() {
-                let block: [u16; 7] = [
-                    bytecode[idx],
-                    bytecode[idx+1],
-                    bytecode[idx+2],
-                    bytecode[idx+3],
-                    bytecode[idx+4],
-                    bytecode[idx+5],
-                    bytecode[idx+6],
-                ];
-                match block {
-                    [
-                        op_1, 
-                        a_idx, 
-                        op_2, 
-                        b_idx, 
-                        op_3, 
-                        op_4,
-                        s_idx
-                    ] if 
-                        op_1 == OpCode::LoadVar as u16 && 
-                        op_2 == OpCode::LoadConst as u16 &&
-                        op_3 == OpCode::Add as u16 &&
-                        op_4 == OpCode::StoreVar as u16 &&
-                        a_idx == s_idx => {
-                        optimized_bytecode.push(OpCode::IncVar as u16);
-                        optimized_bytecode.push(a_idx as u16);
-                        optimized_bytecode.push(b_idx as u16);
-
-                        idx += 7;
-                        continue;
-                    }
-                    _ => {}
-                }
-            }
-            optimized_bytecode.push(bytecode[idx]);
-            idx += 1;
         }
-        optimized_bytecode
+
+        (optimized, addr_map)
     }
 
+    // This function change points where JumpIfFalse and Jump would jump in bytecode, but not in optimized one
+    pub fn patch_addresses(mut optimized: Vec<u16>, addr_map: &[usize]) -> Vec<u16> {
+        let mut i = 0;
+        while i < optimized.len() {
+            let op = optimized[i];
+            
+            match op {
+                // Simple jumps, in u16 the addres locate in the second part, so we do i + 1
+                0x11 | 0x12 => {
+                    let old_addr = optimized[i + 1] as usize;
+                    optimized[i + 1] = addr_map[old_addr] as u16; 
+                    i += 2;
+                }
+                // For super opcodes JVLC / JVGC: addres locate in the third part  (i + 3)
+                0x17 | 0x18 => {
+                    let old_addr = optimized[i + 3] as usize;
+                    optimized[i + 3] = addr_map[old_addr] as u16;
+                    i += 4;
+                }
+                // Simple instructions skipped, because they don't jump
+                0x01 | 0x02 | 0x03 | 0x13 => i += 2,
+                // Super opcodes which don't jump with 2 args
+                0x15 | 0x16 => i += 3,
+                // Other without any args
+                _ => i += 1,
+            }
+        }
+        optimized
+    }
+
+    pub fn finalize_to_u8_simple(patched_bytecode: &[u16]) -> Vec<u8> {
+        let mut bin = Vec::with_capacity(patched_bytecode.len());
+        let mut i = 0;
+
+        while i < patched_bytecode.len() {
+            let op = patched_bytecode[i];
+            bin.push(op as u8); 
+            i += 1;
+
+            match op {
+                // 0 args
+                0x00 | 0x04 | 0x05 | 0x06 | 0x07 | 0x08 | 0x09 | 0x0A | 
+                0x0B | 0x0C | 0x0D | 0x0E | 0x0F | 0x10 | 0x14 => {}
+
+                // 1 arg
+                0x01 | 0x02 | 0x03 | 0x11 | 0x12 | 0x13 => {
+                    let bytes = patched_bytecode[i].to_le_bytes();
+                    bin.push(bytes[0]); bin.push(bytes[1]);
+                    i += 1;
+                }
+
+                // 2 args
+                0x15 | 0x16 => {
+                    for _ in 0..2 {
+                        let bytes = patched_bytecode[i].to_le_bytes();
+                        bin.push(bytes[0]); bin.push(bytes[1]);
+                        i += 1;
+                    }
+                }
+
+                // 3 args
+                0x17 | 0x18 => {
+                    for _ in 0..3 {
+                        let bytes = patched_bytecode[i].to_le_bytes();
+                        bin.push(bytes[0]); bin.push(bytes[1]);
+                        i += 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+        bin
+    }
 
     pub fn byteparse(&mut self) -> Result<Vec<u16>, ErrorHandler> {
         while let Some(_) = self.peek_token() {
@@ -279,14 +390,20 @@ impl<'a> ByteParser<'a>  {
     }
 
     fn parse_if(&mut self) -> Result<(), ErrorHandler> {
-        self.next_token();
-        self.expr_bp(0)?;
+        // Skip IF and parse the expression (we will get 1.0 or 0.0)
+        self.next_token(); 
+        self.expr_bp(0)?;  
         self.hard_expect(KeyWordType::Then, KeyWordType::If)?;
         
+        // We push JumpIfFalse which will immediatly bring our self.expr_bp(0)? and check the condition
         self.bytecode.push(OpCode::JumpIfFalse as u16);
-        let jump_patch = self.bytecode.len();
-        self.bytecode.push(0);
 
+        // We store the idx where the loop is started to return here again
+        let jump_patch = self.bytecode.len();
+        // Push a temporary placeholder (0). The real destination address will overwrite this later.
+        self.bytecode.push(0); 
+
+        // Parse until we meet ELSE or END
         while let Some(token) = self.peek_token() {
             match token {
                 Token::KeyWord(KeyWordType::Else) => break,
@@ -295,24 +412,36 @@ impl<'a> ByteParser<'a>  {
             }
         }
 
+        // If we met ELSE
         if let Some(Token::KeyWord(KeyWordType::Else)) = self.peek_token() {
-            self.next_token();
+            self.next_token(); // Consume ELSE
             
+            // If the THEN block executed successfully, the VM must skip the ELSE block.
+            // So we emit an unconditional Jump at the very end of the THEN block.
             self.bytecode.push(OpCode::Jump as u16);
             let else_jump_patch = self.bytecode.len();
             self.bytecode.push(0);
             
+            // If the IF condition was false, the VM must jump HERE (the beginning of the ELSE block).
+            // The current bytecode length perfectly indicates the first instruction of the ELSE block.
             let jump_target = self.bytecode.len();
-            self.bytecode[jump_patch] = jump_target as u16;
+            self.bytecode[jump_patch] = jump_target as u16; // Overwrite the conditional jump placeholder.
             
+            // Parse all instructions inside the ELSE block until we hit "END".
             while let Some(token) = self.peek_token() {
                 if let Token::KeyWord(KeyWordType::End) = token { break; }
                 self.byteparse_block()?;
             }
             
+            // !!! ИСПРАВЛЕНИЕ №2 !!!
+            // End of the entire IF-ELSE structure. This is where the VM should land after
+            // executing the THEN block to safely bypass the ELSE code.
             let else_target = self.bytecode.len();
             self.bytecode[else_jump_patch] = else_target as u16;
+            
         } else {
+            // If the condition is false, we jump straight to the exit (right after the END token).
+            // Get the current index and overwrite our very first placeholder.
             let jump_target = self.bytecode.len();
             self.bytecode[jump_patch] = jump_target as u16;
         }
@@ -323,13 +452,15 @@ impl<'a> ByteParser<'a>  {
 
     fn parse_while(&mut self) -> Result<(), ErrorHandler> {
         self.next_token();
-        let loop_start = self.bytecode.len();
+
+        let start_loop = self.bytecode.len() as u16;
         self.expr_bp(0)?;
         self.hard_expect(KeyWordType::Then, KeyWordType::While)?;
+
         self.bytecode.push(OpCode::JumpIfFalse as u16);
-        let exit_patch = self.bytecode.len();
+        let end_patch = self.bytecode.len();
         self.bytecode.push(0);
-        
+
         while let Some(token) = self.peek_token() {
             if *token == Token::KeyWord(KeyWordType::Wend) {
                 self.next_token();
@@ -337,12 +468,13 @@ impl<'a> ByteParser<'a>  {
             }
             self.byteparse_block()?;
         }
-        
+
         self.bytecode.push(OpCode::Jump as u16);
-        self.bytecode.push(loop_start as u16);
+        self.bytecode.push(start_loop);
+
+        let end_loop = self.bytecode.len() as u16;
+        self.bytecode[end_patch] = end_loop;
         
-        let loop_end = self.bytecode.len();
-        self.bytecode[exit_patch] = loop_end as u16;
         Ok(())
     }
 
@@ -452,7 +584,7 @@ impl<'a> ByteParser<'a>  {
                 _ => break,
             };
 
-            if l_bp < min_bp as u8 { break; }
+            if l_bp < min_bp as u16 { break; }
 
             let op_token = self.next_token().unwrap();
 

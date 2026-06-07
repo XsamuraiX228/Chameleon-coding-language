@@ -106,17 +106,28 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
     // lexer.debug_tokens(); // Раскомментируй при отладке токенов
     let tokens = lexer.tokenize();
     
-    // 3. Компилируем токены в байт-код через ByteParser
-    let mut rvm_parser = ByteParser::new(tokens, &config);
-    
-    // Компилируем и превращаем кастомную ошибку парсера в String через .map_err
-    let bytecode = rvm_parser.byteparse().map_err(|e| format!("Parser Error: {}", e))?;
-    // ByteParser::debug(&bytecode);
-    let optimized = ByteParser::peephole_optimizer(&bytecode);
-    save_bytecode_to_file(&optimized, "program.bin").unwrap();
-    
-    let mut vm = VirtualMachine::new(bytecode, rvm_parser.constants, rvm_parser.variables.len());
+    // 1. Создаем парсер и генерируем исходный «сырой» байт-код в формате Vec<u16>
+    let mut parser = ByteParser::new(tokens, &config);
+    let raw_bytecode = parser.byteparse().map_err(|e| format!("Parser Error: {}", e))?;
+    // 2. Прогоняем через оптимизатор, который ОДНОВРЕМЕННО строит таблицу соответствия адресов (addr_map).
+    // Теперь функция оптимизатора возвращает кортеж: (Оптимизированный Vec<u16>, Таблица addr_map)
+    let (optimized_bytecode, addr_map) = ByteParser::optimize_and_map_addresses(&raw_bytecode);
+    // dbg!(&optimized_bytecode);
+
+    // 3. Патчим (исправляем) адреса прыжков прямо внутри u16-массива с помощью нашей таблицы addr_map.
+    // Теперь все Jump, JumpIfFalse, JVLC и JVGC вместо u16-индексов содержат ТОЧНЫЕ БАЙТОВЫЕ адреса.
+    let patched_bytecode = ByteParser::patch_addresses(optimized_bytecode, &addr_map);
+    // dbg!(&patched_bytecode);
+
+    // 4. Наш slicer теперь становится простейшим линейным упаковщиком (finalize_to_u8).
+    // Он больше ничего не высчитывает, а просто нарезает patched_bytecode на u8.
+    let slicer = ByteParser::finalize_to_u8_simple(&patched_bytecode);
+    // dbg!(&slicer);
+
+    // 5. Передаем готовый бинарник переменной длины в виртуальную машину и запускаем
+    let mut vm = VirtualMachine::new(slicer, parser.constants, parser.variables.len());
     vm.run_bytecode()?;
+
     Ok(())
 }
 
@@ -133,7 +144,6 @@ pub fn fair_benchmark() {
             LET SUMMA = SUMMA + I
             LET I = I + 1
         WEND
-        PRINT SUMMA
     ";
         
     let iterations = 10; // повторяем 10 раз для усреднения
