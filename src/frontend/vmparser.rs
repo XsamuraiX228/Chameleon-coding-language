@@ -148,9 +148,9 @@ impl<'a> ByteParser<'a>  {
     }
 
     pub fn debug(bytecode: &Vec<u8>) {
-        println!("=== BYTECODE DUMP (16-bit) ===");
+        println!("=== BYTECODE DUMP (8-bit packed) ===");
         for (index, value) in bytecode.iter().enumerate() {
-            println!("{:3}: {:04X}", index, value);
+            println!("{:3}: {:02X}", index, value);
             if (index + 1) % 4 == 0 { println!(); }
         }
         if bytecode.len() % 4 != 0 { println!(); }
