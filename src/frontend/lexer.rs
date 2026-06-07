@@ -328,7 +328,6 @@ impl<'a> Lexer<'a> {
             }
             tokens.push(spanned);
         }
-        tokens.reverse();
         tokens
     }
     // This function is used for debug only

@@ -1,10 +1,7 @@
-#mode "JAPANESE"
-代入 合計 = 0
-代入 合 = 1
+LET i = 10
+WHILE i <= 15 THEN
+    PRINT i
+    LET i = i + 1
+WEND
 
-間 合 <= 10000000 ならば
-    代入 合計 = 合計 + 合
-    代入 合 = 合 + 1
-繰り返す
-
-表示 合計
+PRINT 67

@@ -10,6 +10,24 @@ pub mod runtime;
 pub mod io; 
 pub mod diagnostic;
 
+use std::fs::File;
+use std::io::Write;
+
+pub fn save_bytecode_to_file(bytecode: &[u16], filename: &str) -> std::io::Result<()> {
+    let mut file = File::create(filename)?;
+    let mut byte_buffer = Vec::with_capacity(bytecode.len() * 2);
+
+    for &word in bytecode {
+        // Convert u16 to bytes (using Little Endian, or use to_be_bytes for Big Endian)
+        let bytes = word.to_le_bytes(); 
+        byte_buffer.push(bytes[0]);
+        byte_buffer.push(bytes[1]);
+    }
+
+    file.write_all(&byte_buffer)?;
+    Ok(())
+}
+
 /// Run the code (Preprocessor -> Lexer -> Parser -> Interprenter)
 pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
     // 1. Looking for #mode and set dialect::SyntaxDict
@@ -93,30 +111,29 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
     
     // Компилируем и превращаем кастомную ошибку парсера в String через .map_err
     let bytecode = rvm_parser.byteparse().map_err(|e| format!("Parser Error: {}", e))?;
+    // ByteParser::debug(&bytecode);
+    let optimized = ByteParser::peephole_optimizer(&bytecode);
+    save_bytecode_to_file(&optimized, "program.bin").unwrap();
     
-    // Вывод отладочной информации компилятора (константы, переменные, байт-код)
-    rvm_parser.debug();
-    
-    // 4. Инициализируем и запускаем нашу гипер-оптимизированную unsafe ВМ
-    let mut vm = VirtualMachine::new(bytecode, &rvm_parser.constants, rvm_parser.variables.len());
+    let mut vm = VirtualMachine::new(bytecode, rvm_parser.constants, rvm_parser.variables.len());
     vm.run_bytecode()?;
-    
     Ok(())
 }
+
+
 
 use std::time::{Instant, Duration};
 
 pub fn fair_benchmark() {
     // БОЛЬШАЯ программа (100000 итераций)
     let russian_program = "
-        #mode \"RUSSIAN\"
-        ПУСТЬ СУММА = 0
-        ПУСТЬ И = 1
-        ПОКА И <= 10000000 ТО
-            ПУСТЬ СУММА = СУММА + И
-            ПУСТЬ И = И + 1
-        КОНЕЦ_ПОКА
-        ПЕЧАТЬ СУММА
+        LET SUMMA = 0
+        LET I = 1
+        WHILE I <= 10000000 THEN
+            LET SUMMA = SUMMA + I
+            LET I = I + 1
+        WEND
+        PRINT SUMMA
     ";
         
     let iterations = 10; // повторяем 10 раз для усреднения

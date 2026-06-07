@@ -5,8 +5,10 @@ use crate::diagnostic::diagnostic::{ErrorHandler, ErrorKind};
 use super::token::{Token, CmpOp, OpType, Literal};
 use super::ast::Expression;
 use crate::dialect::SyntaxDict;
+use std::vec::IntoIter;
+use std::iter::Peekable;
 pub struct Parser<'a> {
-    tokens: Vec<SpannedToken<'a>>,
+    tokens: Peekable<IntoIter<SpannedToken<'a>>>,
     pub current_line: usize,
     dialect: &'a SyntaxDict
 }
@@ -14,18 +16,18 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
 
     // Create Parser
-    pub fn new(tokens: Vec<SpannedToken<'a>>, dialect: &'a SyntaxDict ) -> Self {
-        Self {tokens, current_line: 1, dialect}
+    pub fn new(token: Vec<SpannedToken<'a>>, dialect: &'a SyntaxDict ) -> Self {
+        Self {tokens: token.into_iter().peekable(), current_line: 1, dialect}
     }
 
     // Functions peek is used to look at the token and check it
-    fn peek(&self) -> Option<&Token<'a>> {
-        self.tokens.last().map(|spanned| &spanned.token)
+    fn peek(&mut self) -> Option<&Token<'a>> {
+        self.tokens.peek().map(|spanned| &spanned.token)
     }
 
     // Function next is used to get the token and skip it, by using .pop()
     fn next(&mut self) -> Option<Token<'a>> {
-        let spanned= self.tokens.pop()?;
+        let spanned= self.tokens.next()?;
         self.current_line = spanned.line;
         Some(spanned.token)
     }

@@ -47,7 +47,6 @@ impl<'a> Interpreter<'a> {
                 marks.insert(name, idx);
             }
         }
-        dbg!(&marks);
         marks
     }
 

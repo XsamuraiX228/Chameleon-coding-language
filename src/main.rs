@@ -3,7 +3,10 @@ use basic_lexer::{io::scanner::{
     scan_code,}, 
     // run_pipeline,
     run_rvmpipeline,
+    fair_benchmark,
 };
+
+
 
 fn main() -> Result<(), String> {
     // Find files in dir FILES
@@ -29,7 +32,8 @@ fn main() -> Result<(), String> {
             return Err(format!("[Error reading file {:?}]: {}", path, e)); 
         }
     };
-    
+
+    // run_pipeline(&code)?;
     run_rvmpipeline(&code)?;
     Ok(())
 }
