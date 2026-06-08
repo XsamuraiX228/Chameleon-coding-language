@@ -75,14 +75,13 @@ pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
 }
 
 pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
-    // 1. Настройка диалекта по умолчанию
     let mut config = SyntaxDict::get_dict("ENGLISH");
     
-    // Указатель на часть кода, которую будем парсить, и счетчик строк для ошибок
+    
     let mut code_to_parse = raw_code;
     let mut line_counter = 1;
-    
-    // Препроцессинг: Ищем директиву #mode в первой строке
+
+    // Check the first line to get the dialect for our language
     if let Some(first_line) = raw_code.lines().next() {
         let trimmed = first_line.trim();
         if trimmed.starts_with("#mode") {
@@ -94,37 +93,34 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
                     println!("[VM Preprocessor]: Dictionary for language successfully connected: {}", dict_name);
                 }
             }
-            // Отрезаем директиву #mode, чтобы лексер её не обрабатывал
             if let Some(pos) = raw_code.find('\n') {
                 code_to_parse = &raw_code[pos + 1..];
             }
         }
     }
 
-    // 2. Создаем лексер с учетом выбранного диалекта и смещения строк
+    // Creating lexer to read the whole file code and create a Vec<SpannedToken<'_>>
     let mut lexer = Lexer::new(code_to_parse, &config, line_counter);
-    // lexer.debug_tokens(); // Раскомментируй при отладке токенов
     let tokens = lexer.tokenize();
     
-    // 1. Создаем парсер и генерируем исходный «сырой» байт-код в формате Vec<u16>
+    // Creating parser
     let mut parser = ByteParser::new(tokens, &config);
+
+    // First we create raw_bytecode - it's not optimized and it's Vec<u16>
     let raw_bytecode = parser.byteparse().map_err(|e| format!("Parser Error: {}", e))?;
-    // 2. Прогоняем через оптимизатор, который ОДНОВРЕМЕННО строит таблицу соответствия адресов (addr_map).
-    // Теперь функция оптимизатора возвращает кортеж: (Оптимизированный Vec<u16>, Таблица addr_map)
+
+    // Second we call an optimize_and_map_addresses function to change some long and repetitive instructions
+    // for shorter ones, while also creating an address map which will help to set the correct jump
+    // points for out Jump and JumpIfFalse opcodes
     let (optimized_bytecode, addr_map) = ByteParser::optimize_and_map_addresses(&raw_bytecode);
-    // dbg!(&optimized_bytecode);
 
-    // 3. Патчим (исправляем) адреса прыжков прямо внутри u16-массива с помощью нашей таблицы addr_map.
-    // Теперь все Jump, JumpIfFalse, JVLC и JVGC вместо u16-индексов содержат ТОЧНЫЕ БАЙТОВЫЕ адреса.
+    // patch_addresses one more time move through the whole array and set correct address
     let patched_bytecode = ByteParser::patch_addresses(optimized_bytecode, &addr_map);
-    // dbg!(&patched_bytecode);
 
-    // 4. Наш slicer теперь становится простейшим линейным упаковщиком (finalize_to_u8).
-    // Он больше ничего не высчитывает, а просто нарезает patched_bytecode на u8.
+    // Finally convert our Vec<u16> -> Vec<u8>
     let slicer = ByteParser::finalize_to_u8_simple(&patched_bytecode);
-    // dbg!(&slicer);
-
-    // 5. Передаем готовый бинарник переменной длины в виртуальную машину и запускаем
+    
+    // Run our sliced code
     let mut vm = VirtualMachine::new(slicer, parser.constants, parser.variables.len());
     vm.run_bytecode()?;
 
@@ -136,7 +132,6 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
 use std::time::{Instant, Duration};
 
 pub fn fair_benchmark() {
-    // БОЛЬШАЯ программа (100000 итераций)
     let russian_program = "
         LET SUMMA = 0
         LET I = 1
@@ -146,12 +141,12 @@ pub fn fair_benchmark() {
         WEND
     ";
         
-    let iterations = 10; // повторяем 10 раз для усреднения
+    let iterations = 10; 
     
     let mut classic_times = Vec::new();
     let mut vm_times = Vec::new();
     
-    // Классический интерпретатор
+    // Classic
     println!("Running Classic interpreter...");
     for _ in 0..iterations {
         let start = Instant::now();

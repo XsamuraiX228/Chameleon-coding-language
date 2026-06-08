@@ -59,6 +59,8 @@ impl<'a> VirtualMachine {
                     self.globals[idx] = value;
                 }
 
+                // === Math opcodes === //
+
                 // Opcode Add (0x04)
                 0x04 => {
                     let b = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in ADD (arg B)".to_string())?;
@@ -123,6 +125,8 @@ impl<'a> VirtualMachine {
                     self.stack.push(-a);
                 }
 
+                // === Comparative opcodes === //
+
                 // Opcode Equal (0x0B)
                 0x0B => {
                     let b = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in ==".to_string())?;
@@ -137,33 +141,35 @@ impl<'a> VirtualMachine {
                     self.stack.push(if a != b { 1 } else { 0 });
                 }
 
-                // Opcode Greater (0x0D)
+                // Opcode Less (0x0D)
                 0x0D => {
                     let b = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in >".to_string())?;
                     let a = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in >".to_string())?;
-                    self.stack.push(if a > b { 1 } else { 0 });
-                }
-
-                // Opcode Less (0x0E)
-                0x0E => {
-                    let b = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in <".to_string())?;
-                    let a = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in <".to_string())?;
                     self.stack.push(if a < b { 1 } else { 0 });
                 }
 
-                // Opcode GreaterEq (0x0F)
+                // Opcode LessEq (0x0E)
+                0x0E => {
+                    let b = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in <".to_string())?;
+                    let a = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in <".to_string())?;
+                    self.stack.push(if a <= b { 1 } else { 0 });
+                }
+
+                // Opcode Greater (0x0F)
                 0x0F => {
                     let b = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in >=".to_string())?;
                     let a = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in >=".to_string())?;
-                    self.stack.push(if a >= b { 1 } else { 0 });
+                    self.stack.push(if a > b { 1 } else { 0 });
                 }
 
-                // Opcode LessEq (0x10)
+                // Opcode GreaterEq (0x10)
                 0x10 => {
                     let b = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in <=".to_string())?;
                     let a = self.stack.pop().ok_or_else(|| "VM Error: Stack underflow in <=".to_string())?;
-                    self.stack.push(if a <= b { 1 } else { 0 });
+                    self.stack.push(if a >= b { 1 } else { 0 });
                 }
+
+                // === Jump opcodes === //
 
                 // Opcode Jump (0x11)
                 0x11 => {

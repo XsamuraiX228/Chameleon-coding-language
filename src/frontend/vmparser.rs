@@ -32,10 +32,10 @@ pub enum OpCode {
     // === Compare operators ===
     Equal       = 0x0B,
     NotEqual    = 0x0C,
-    Greater     = 0x0D,
-    Less        = 0x0E,
-    GreaterEq   = 0x0F,
-    LessEq      = 0x10,
+    Less        = 0x0D,
+    LessEq      = 0x0E,
+    Greater     = 0x0F,
+    GreaterEq   = 0x10,
 
     // === Opcodes which use for controlling the programm ===
     Jump        = 0x11,
@@ -147,10 +147,20 @@ impl<'a> ByteParser<'a>  {
         Err(self.hard_error(error_kw_str, context_kw_str))
     }
 
-    pub fn debug(bytecode: &Vec<u8>) {
-        println!("=== BYTECODE DUMP (16-bit) ===");
+    pub fn u16_debug(bytecode: &Vec<u16>) {
+        println!("=== BYTECODE DUMP (16-bit packed) ===");
         for (index, value) in bytecode.iter().enumerate() {
             println!("{:3}: {:04X}", index, value);
+            if (index + 1) % 8 == 0 { println!(); }
+        }
+        if bytecode.len() % 8 != 0 { println!(); }
+        println!("==============================");
+    }
+
+    pub fn u8_debug(bytecode: &Vec<u8>) {
+        println!("=== BYTECODE DUMP (8-bit packed) ===");
+        for (index, value) in bytecode.iter().enumerate() {
+            println!("{:3}: {:02X}", index, value);
             if (index + 1) % 4 == 0 { println!(); }
         }
         if bytecode.len() % 4 != 0 { println!(); }
@@ -264,7 +274,6 @@ impl<'a> ByteParser<'a>  {
         let mut i = 0;
         while i < optimized.len() {
             let op = optimized[i];
-            
             match op {
                 // Simple jumps, in u16 the addres locate in the second part, so we do i + 1
                 0x11 | 0x12 => {
