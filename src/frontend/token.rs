@@ -1,5 +1,5 @@
 pub const VALID_OPERATORS: [char; 7] = ['+', '-', '*', '%', '^', '(', ')'];
-
+use super::vmparser::Opcodes;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyWordType {
     Let,
@@ -41,6 +41,34 @@ pub enum CmpOp {
     GreaterEqual, // >=
     Less, // <
     Greater, // >
+}
+
+impl OpType {
+    pub fn to_opcode(&self) -> Opcodes {
+        match self {
+            OpType::Plus => Opcodes::Add,
+            OpType::Minus => Opcodes::Sub,
+            OpType::Multiply => Opcodes::Mul,
+            OpType::Divide => Opcodes::Div,
+            OpType::Mod => Opcodes::Mod,
+            OpType::Power => Opcodes::Pow,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl CmpOp {
+    pub fn to_opcode(&self) -> Opcodes {
+        match self {
+            CmpOp::DoubleEqual => Opcodes::Equal,
+            CmpOp::Less => Opcodes::Less,
+            CmpOp::Greater => Opcodes::Greater,
+            CmpOp::NonEqual => Opcodes::NotEqual,
+            CmpOp::GreaterEqual => Opcodes::GreaterEq,
+            CmpOp::LessEqual => Opcodes::LessEq,
+            _ =>  unreachable!(),
+        }
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Literal<'a> {

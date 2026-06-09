@@ -1,8 +1,5 @@
-#mode "JAPANESE"
-代入 合計 = 0
-代入 数 = 0
-間 数 <= 1000000 ならば
-    代入 合計 = 合計 + 数
-    代入 数 = 数 + 1
-繰り返す
-表示 合計
+INPUT X
+WHILE X <= 100 THEN
+    PRINT X
+    LET X = X + 5
+WEND

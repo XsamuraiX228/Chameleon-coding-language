@@ -1,6 +1,6 @@
 use crate::{
     dialect::SyntaxDict, 
-    frontend::{lexer::Lexer, parser::Parser, vmparser::ByteParser, vrmachine::VirtualMachine},
+    frontend::{lexer::Lexer, parser::Parser,vrmachine::VirtualMachine, vmparser::Bparser},
     runtime::interpreter::Interpreter,
     
 };
@@ -101,27 +101,15 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
 
     // Creating lexer to read the whole file code and create a Vec<SpannedToken<'_>>
     let mut lexer = Lexer::new(code_to_parse, &config, line_counter);
+    // lexer.debug_tokens();
     let tokens = lexer.tokenize();
-    
     // Creating parser
-    let mut parser = ByteParser::new(tokens, &config);
+    let mut parser = Bparser::new(tokens, &config);
 
     // First we create raw_bytecode - it's not optimized and it's Vec<u16>
-    let raw_bytecode = parser.byteparse().map_err(|e| format!("Parser Error: {}", e))?;
-
-    // Second we call an optimize_and_map_addresses function to change some long and repetitive instructions
-    // for shorter ones, while also creating an address map which will help to set the correct jump
-    // points for out Jump and JumpIfFalse opcodes
-    let (optimized_bytecode, addr_map) = ByteParser::optimize_and_map_addresses(&raw_bytecode);
-
-    // patch_addresses one more time move through the whole array and set correct address
-    let patched_bytecode = ByteParser::patch_addresses(optimized_bytecode, &addr_map);
-
-    // Finally convert our Vec<u16> -> Vec<u8>
-    let slicer = ByteParser::finalize_to_u8_simple(&patched_bytecode);
-    
+    let raw_bytecode = parser.start_byteparsing().map_err(|e| format!("Parser Error: {}", e))?;
     // Run our sliced code
-    let mut vm = VirtualMachine::new(slicer, parser.constants, parser.variables.len());
+    let mut vm = VirtualMachine::new(raw_bytecode, parser.constants, parser.variables.len());
     vm.run_bytecode()?;
 
     Ok(())
