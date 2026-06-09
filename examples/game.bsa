@@ -1,5 +1,3 @@
-INPUT X
-WHILE X <= 100 THEN
-    PRINT X
-    LET X = X + 5
-WEND
+FOR I = 1 TO 100 
+    PRINT I
+NEXT

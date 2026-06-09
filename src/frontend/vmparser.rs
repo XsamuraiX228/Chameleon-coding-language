@@ -148,9 +148,7 @@ impl<'a> Bparser<'a>  {
 
     fn to_u8(&mut self, opcode: u8) {
         self.bytecode.push(opcode);
-        self.bytecode.push(0x00);
-        self.bytecode.push(0x00);
-    } 
+    }
 
     pub fn start_byteparsing(&mut self) -> Result<Vec<u8>, ErrorHandler> {
         while let Some(_) = self.peek_token() {
@@ -213,7 +211,7 @@ impl<'a> Bparser<'a>  {
         let low_byte = (target_instruction_idx & 0xFF) as u8;
         let high_byte = ((target_instruction_idx >> 8) & 0xFF) as u8;
         
-        // Записываем u16 в аргумент инструкции (индекс + 1 и индекс + 2)
+        
         self.bytecode[instr_pos + 1] = low_byte;
         self.bytecode[instr_pos + 2] = high_byte;
     }
@@ -238,7 +236,7 @@ impl<'a> Bparser<'a>  {
             self.parse_else(start_if_condition)?;
         } else {
             self.hard_expect(KeyWordType::End, KeyWordType::If)?;
-            let target = (self.bytecode.len() / 3) as u16;
+            let target = self.bytecode.len() as u16;
             self.patch_address(start_if_condition, target);
         }
 
@@ -250,7 +248,7 @@ impl<'a> Bparser<'a>  {
         let jump_pos = self.bytecode.len();
         self.to_u8_with_args(Opcodes::Jump as u8, 0);
 
-        let start_else_condition = (self.bytecode.len() / 3 ) as u16;
+        let start_else_condition = self.bytecode.len() as u16;
         self.patch_address(jump_if_false_pos, start_else_condition);
 
         while let Some(token) = self.peek_token() {
@@ -262,14 +260,14 @@ impl<'a> Bparser<'a>  {
 
         self.hard_expect(KeyWordType::End, KeyWordType::If)?;
 
-        let end_idx = (self.bytecode.len() / 3) as u16;
+        let end_idx = self.bytecode.len() as u16;
         self.patch_address(jump_pos, end_idx);
         Ok(())
     }
 
     fn parse_while(&mut self) -> Result<(),  ErrorHandler> {
         self.next_token(); // Skip WHILE
-        let start_loop = (self.bytecode.len() / 3) as u16;
+        let start_loop = self.bytecode.len() as u16;
         self.expr_bp(0)?;
         self.hard_expect(KeyWordType::Then, KeyWordType::While)?;
 
@@ -286,7 +284,7 @@ impl<'a> Bparser<'a>  {
 
         self.to_u8_with_args(Opcodes::Jump as u8, start_loop);
         
-        let end_idx = (self.bytecode.len() / 3) as u16;
+        let end_idx = self.bytecode.len() as u16;
         self.patch_address(while_start, end_idx);
         Ok(())
     }
@@ -313,7 +311,7 @@ impl<'a> Bparser<'a>  {
         }
         let step_idx = self.add_constant(step_value);
 
-        let loop_start = (self.bytecode.len() / 3) as u16;
+        let loop_start = self.bytecode.len() as u16;
 
         self.to_u8_with_args(Opcodes::LoadVar as u8, var_id);
         self.to_u8_with_args(Opcodes::LoadConst as u8, limit_id);
@@ -343,7 +341,7 @@ impl<'a> Bparser<'a>  {
         
         self.to_u8_with_args(Opcodes::Jump as u8, loop_start);
 
-        let end_idx = (self.bytecode.len() / 3) as u16;
+        let end_idx = self.bytecode.len() as u16;
         self.patch_address(for_jump_pos, end_idx);
 
 

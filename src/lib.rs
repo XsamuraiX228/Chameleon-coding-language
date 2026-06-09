@@ -9,24 +9,7 @@ pub mod frontend;
 pub mod runtime;
 pub mod io; 
 pub mod diagnostic;
-
-use std::fs::File;
-use std::io::Write;
-
-pub fn save_bytecode_to_file(bytecode: &[u16], filename: &str) -> std::io::Result<()> {
-    let mut file = File::create(filename)?;
-    let mut byte_buffer = Vec::with_capacity(bytecode.len() * 2);
-
-    for &word in bytecode {
-        // Convert u16 to bytes (using Little Endian, or use to_be_bytes for Big Endian)
-        let bytes = word.to_le_bytes(); 
-        byte_buffer.push(bytes[0]);
-        byte_buffer.push(bytes[1]);
-    }
-
-    file.write_all(&byte_buffer)?;
-    Ok(())
-}
+use std::fs;
 
 /// Run the code (Preprocessor -> Lexer -> Parser -> Interprenter)
 pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
@@ -108,6 +91,9 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
 
     // First we create raw_bytecode - it's not optimized and it's Vec<u16>
     let raw_bytecode = parser.start_byteparsing().map_err(|e| format!("Parser Error: {}", e))?;
+
+
+    fs::write("program.bin", &raw_bytecode).expect("Failed to write bytecode");
     // Run our sliced code
     let mut vm = VirtualMachine::new(raw_bytecode, parser.constants, parser.variables.len());
     vm.run_bytecode()?;
