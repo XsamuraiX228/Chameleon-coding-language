@@ -213,7 +213,7 @@ impl<'a> Bparser<'a>  {
         let low_byte = (target_instruction_idx & 0xFF) as u8;
         let high_byte = ((target_instruction_idx >> 8) & 0xFF) as u8;
         
-        // Записываем u16 в аргумент инструкции (индекс + 1 и индекс + 2)
+        
         self.bytecode[instr_pos + 1] = low_byte;
         self.bytecode[instr_pos + 2] = high_byte;
     }
