@@ -18,7 +18,9 @@ src/
 │   ├── token.rs         # Lexer tokens and SpannedToken (token + line)
 │   ├── lexer.rs         # converts raw source strings into Vec<Token<'a>>
 │   ├── ast.rs           # Abstract Syntax Tree structures and SpannedStatement
-│   └── parser.rs        # Pratt Parser engine: returns Result<Vec<SpannedStatement>, ErrorHandler>
+│   ├── parser.rs        # Pratt Parser engine: returns Result<Vec<SpannedStatement>, ErrorHandler>
+│   ├── vmparser.rs
+│   └── vmmachine.rs
 ├── io/
 │   ├── mod.rs
 |   └── scanner.rs       # Scan dirs for files with base .bsa and read
