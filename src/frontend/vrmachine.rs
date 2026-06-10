@@ -7,7 +7,8 @@ pub struct VirtualMachine {
 }
 
 impl<'a> VirtualMachine {
-    pub fn new(bytecode: Vec<u8>, constants: Vec<i64>, var_count: usize) -> Self {
+    pub fn new(raw_code: Vec<u8>, var_count: usize) -> Self {
+        let (bytecode, constants) = Self::deserialize(raw_code);
         Self {
             bytecode,
             constants,
@@ -23,6 +24,21 @@ impl<'a> VirtualMachine {
         let high = self.bytecode[self.pc + 2] as u16;
         (high << 8) | low
     }
+
+    pub fn deserialize(data: Vec<u8>) -> (Vec<u8>, Vec<i64>) {
+        let const_count = (data[0] as usize) | ((data[1] as usize) << 8);
+        let mut constants = Vec::new();
+        
+        for i in 0..const_count {
+            let offset = 2 + i * 8;
+            let bytes: [u8; 8] = data[offset..offset+8].try_into().unwrap();
+            constants.push(i64::from_le_bytes(bytes));
+        }
+        
+        let bytecode = data[2 + const_count * 8..].to_vec();
+        (bytecode, constants)
+    }
+
     
     pub fn run_bytecode(&mut self) -> Result<(), String> {
     let len = self.bytecode.len();
@@ -33,6 +49,7 @@ impl<'a> VirtualMachine {
 
         match opcode {
             0x00 => break,
+            
 
             // С аргументом (pc += 3)
             0x01 => {

@@ -150,12 +150,26 @@ impl<'a> Bparser<'a>  {
         self.bytecode.push(opcode);
     }
 
+    fn serialized(&self) -> Vec<u8> {
+        let mut output: Vec<u8> = Vec::new();
+        output.push((self.constants.len() & 0xFF) as u8);
+        output.push((self.constants.len() >> 8) as u8);
+
+        for &c in &self.constants {
+            output.extend_from_slice(&c.to_le_bytes());
+        }
+
+        output.extend_from_slice(&self.bytecode);
+        output
+    }
+
     pub fn start_byteparsing(&mut self) -> Result<Vec<u8>, ErrorHandler> {
         while let Some(_) = self.peek_token() {
             self.byteparse_block()?;
         }
         self.to_u8(Opcodes::Stop as u8);
-        Ok(self.bytecode.clone())
+        let b_code = self.serialized();
+        Ok(b_code)
     }
 
     pub fn byteparse_block(&mut self) -> Result<(), ErrorHandler> {
