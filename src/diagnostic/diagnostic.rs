@@ -1,10 +1,12 @@
 use std::fmt;
+#[derive(Debug)]
 pub enum ErrorKind {
     Lexical,
     Syntax,
     Runtime,
 } 
 
+#[derive(Debug)]
 pub struct ErrorHandler {
     err_type: ErrorKind,
     error: String,

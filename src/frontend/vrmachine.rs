@@ -7,8 +7,8 @@ pub struct VirtualMachine {
 }
 
 impl<'a> VirtualMachine {
-    pub fn new(raw_code: Vec<u8>, var_count: usize) -> Self {
-        let (bytecode, constants) = Self::deserialize(raw_code);
+    pub fn new(raw_code: Vec<u8>) -> Self {
+        let (bytecode, constants, var_count) = Self::deserialize(raw_code);
         Self {
             bytecode,
             constants,
@@ -25,19 +25,28 @@ impl<'a> VirtualMachine {
         (high << 8) | low
     }
 
-    pub fn deserialize(data: Vec<u8>) -> (Vec<u8>, Vec<i64>) {
-        let const_count = (data[0] as usize) | ((data[1] as usize) << 8);
-        let mut constants = Vec::new();
-        
-        for i in 0..const_count {
-            let offset = 2 + i * 8;
-            let bytes: [u8; 8] = data[offset..offset+8].try_into().unwrap();
+    pub fn deserialize(data: Vec<u8>) -> (Vec<u8>, Vec<i64>, usize) {
+        let mut pos = 0;
+
+        let const_count = (data[pos] as usize) | ((data[pos + 1] as usize) << 8);
+        pos += 2;
+
+        let mut constants = Vec::with_capacity(const_count);
+        for _ in 0..const_count {
+            let bytes: [u8; 8] = data[pos..pos+8].try_into().unwrap();
             constants.push(i64::from_le_bytes(bytes));
+            pos += 8;
         }
-        
-        let bytecode = data[2 + const_count * 8..].to_vec();
-        (bytecode, constants)
+
+        let var_count = (data[pos] as usize) | ((data[pos  + 1] as usize) << 8);
+        pos += 2;
+
+
+        let bytecode = data[pos..].to_vec();
+        (bytecode, constants, var_count)
     }
+
+    
 
     
     pub fn run_bytecode(&mut self) -> Result<(), String> {
@@ -50,8 +59,6 @@ impl<'a> VirtualMachine {
         match opcode {
             0x00 => break,
             
-
-            // С аргументом (pc += 3)
             0x01 => {
                 let arg = self.get_arg();
                 self.stack.push(self.constants[arg as usize]);
@@ -158,7 +165,7 @@ impl<'a> VirtualMachine {
             }
             0x11 => {
                 let arg = self.get_arg();
-                self.pc = arg as usize; // теперь просто индекс байта, не * 3
+                self.pc = arg as usize; 
             }
             0x12 => {
                 let arg = self.get_arg();
@@ -183,8 +190,19 @@ impl<'a> VirtualMachine {
                 self.pc += 3;
             }
             _ => return Err(format!("Unknown opcode: 0x{:02X} at PC: {}", opcode, self.pc)),
+            }
         }
+        Ok(())
     }
-    Ok(())
+    // Добавь это в vrmachine.rs внутри impl VirtualMachine
+    #[cfg(test)]
+    pub fn get_stack(&self) -> &[i64] {
+        &self.stack
+    }
+
+    #[cfg(test)]
+    pub fn get_globals(&self) -> &[i64] {
+        &self.globals
+    }
 }
-}
+

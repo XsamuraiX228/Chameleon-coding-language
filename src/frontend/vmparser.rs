@@ -21,9 +21,9 @@ pub struct Bparser<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Opcodes {
     // Memory
-    LoadConst  = 0x01,  // стек ← константа
-    LoadVar    = 0x02,  // стек ← переменная  
-    StoreVar   = 0x03,  // переменная ← стек
+    LoadConst  = 0x01,  // const <- stack
+    LoadVar    = 0x02,  // var <- stack
+    StoreVar   = 0x03,  // var -> stack
 
     // Math 
     Add        = 0x04,
@@ -158,6 +158,9 @@ impl<'a> Bparser<'a>  {
         for &c in &self.constants {
             output.extend_from_slice(&c.to_le_bytes());
         }
+
+        output.push((self.variables.len() & 0xFF) as u8);
+        output.push((self.variables.len() >> 8) as u8);
 
         output.extend_from_slice(&self.bytecode);
         output
