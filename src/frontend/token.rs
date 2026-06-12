@@ -1,5 +1,5 @@
 pub const VALID_OPERATORS: [char; 7] = ['+', '-', '*', '%', '^', '(', ')'];
-use super::vmparser::Opcodes;
+use super::vmparser::Opcode;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyWordType {
     Let,
@@ -17,6 +17,9 @@ pub enum KeyWordType {
     Step,
     Next,
     End,
+    And,
+    Or,
+    Not,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,29 +47,35 @@ pub enum CmpOp {
 }
 
 impl OpType {
-    pub fn to_opcode(&self) -> Opcodes {
+    pub fn to_opcode(&self) -> Opcode {
         match self {
-            OpType::Plus => Opcodes::Add,
-            OpType::Minus => Opcodes::Sub,
-            OpType::Multiply => Opcodes::Mul,
-            OpType::Divide => Opcodes::Div,
-            OpType::Mod => Opcodes::Mod,
-            OpType::Power => Opcodes::Pow,
-            _ => unreachable!(),
+            OpType::Plus => Opcode::Add,
+            OpType::Minus => Opcode::Sub,
+            OpType::Multiply => Opcode::Mul,
+            OpType::Divide => Opcode::Div,
+            OpType::Mod => Opcode::Mod,
+            OpType::Power => Opcode::Pow,
+            _ => {
+                println!("Error, Math");
+                unreachable!()
+            },
         }
     }
 }
 
 impl CmpOp {
-    pub fn to_opcode(&self) -> Opcodes {
+    pub fn to_opcode(&self) -> Opcode {
         match self {
-            CmpOp::DoubleEqual => Opcodes::Equal,
-            CmpOp::Less => Opcodes::Less,
-            CmpOp::Greater => Opcodes::Greater,
-            CmpOp::NonEqual => Opcodes::NotEqual,
-            CmpOp::GreaterEqual => Opcodes::GreaterEq,
-            CmpOp::LessEqual => Opcodes::LessEq,
-            _ =>  unreachable!(),
+            CmpOp::DoubleEqual => Opcode::Equal,
+            CmpOp::Less => Opcode::Less,
+            CmpOp::Greater => Opcode::Greater,
+            CmpOp::NonEqual => Opcode::NotEqual,
+            CmpOp::GreaterEqual => Opcode::GreaterEq,
+            CmpOp::LessEqual => Opcode::LessEq,
+            _ => {
+                println!("Error, Compare");
+                unreachable!()
+            },
         }
     }
 }
@@ -150,6 +159,9 @@ impl fmt::Display for KeyWordType {
             KeyWordType::Step => "STEP",
             KeyWordType::Next => "NEXT",
             KeyWordType::End => "END",
+            KeyWordType::And => "AND",
+            KeyWordType::Or => "OR",
+            KeyWordType::Not => "NOT"
         };
         write!(f, "{}", s)
     }

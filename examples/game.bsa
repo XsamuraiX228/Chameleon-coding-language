@@ -1,1 +1,12 @@
-LET x = 10 / 0
+IF NOT 1 == 2 THEN
+    PRINT "1 is not 2"
+END
+
+IF NOT (5 > 10) THEN
+    PRINT "5 > 10 is false, so NOT makes it true"
+END
+
+LET Flag = 0
+IF NOT Flag THEN
+    PRINT "Flag is zero (false)"
+END

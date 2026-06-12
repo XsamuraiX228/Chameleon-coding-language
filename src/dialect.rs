@@ -40,6 +40,11 @@ impl SyntaxDict {
         keywords.insert("GOTO".to_string(), KeyWordType::Goto);
         keywords.insert("RANDOM".to_string(), KeyWordType::Random);
         keywords.insert("END".to_string(), KeyWordType::End);
+
+        // Bool operators
+        keywords.insert("AND".to_string(), KeyWordType::And);
+        keywords.insert("OR".to_string(), KeyWordType::Or);
+        keywords.insert("NOT".to_string(), KeyWordType::Not);
         
         Self { keywords }
     }
@@ -70,6 +75,35 @@ impl SyntaxDict {
         keywords.insert("ИДИ".to_string(), KeyWordType::Goto);
         keywords.insert("РАНДОМ".to_string(), KeyWordType::Random);
         keywords.insert("СТОП".to_string(), KeyWordType::End);
+        
+        Self { keywords }
+    }
+
+    fn default_french() -> Self {
+        let mut keywords = HashMap::new();
+        
+        // Переменные и операции
+        keywords.insert("SOIT".to_string(), KeyWordType::Let);       // Вместо LET (Пусть...)
+        keywords.insert("AFFICHER".to_string(), KeyWordType::Print); // Вместо PRINT (Показать/Вывести)
+        keywords.insert("LIRE".to_string(), KeyWordType::Input);     // Вместо INPUT (Считать/Ввести)
+        
+        // Условия
+        keywords.insert("SI".to_string(), KeyWordType::If);          // Вместо IF
+        keywords.insert("ALORS".to_string(), KeyWordType::Then);     // Вместо THEN
+        keywords.insert("SINON".to_string(), KeyWordType::Else);     // Вместо ELSE
+        
+        // Циклы
+        keywords.insert("TANT_QUE".to_string(), KeyWordType::While); // Вместо WHILE (Пока...)
+        keywords.insert("FIN_TANT".to_string(), KeyWordType::Wend);  // Вместо WEND (Конец ПОКА)
+        keywords.insert("POUR".to_string(), KeyWordType::For);       // Вместо FOR
+        keywords.insert("A".to_string(), KeyWordType::To);           // Вместо TO (До...)
+        keywords.insert("PAS".to_string(), KeyWordType::Step);       // Вместо STEP (Шаг)
+        keywords.insert("SUIVANT".to_string(), KeyWordType::Next);   // Вместо NEXT (Следующий)
+        
+        // Прыжки и утилиты
+        keywords.insert("ALLER_A".to_string(), KeyWordType::Goto);   // Вместо GOTO
+        keywords.insert("ALEATOIRE".to_string(), KeyWordType::Random); // Вместо RANDOM
+        keywords.insert("FIN".to_string(), KeyWordType::End);        // Вместо END
         
         Self { keywords }
     }
@@ -280,6 +314,91 @@ impl SyntaxDict {
         Self { keywords }
     }
 
+    fn default_hindi() -> Self {
+        let mut keywords = HashMap::new();
+        
+        // वेरिएबल्स और ऑपरेशंस (Variables & Operations)
+        keywords.insert("मानो".to_string(), KeyWordType::Let);       // LET (मानो x = 10)
+        keywords.insert("दिखाओ".to_string(), KeyWordType::Print);    // PRINT (दिखाओ x)
+        keywords.insert("लो".to_string(), KeyWordType::Input);        // INPUT (लो x)
+        
+        // शर्तें (Conditionals)
+        keywords.insert("यदि".to_string(), KeyWordType::If);          // IF
+        keywords.insert("तो".to_string(), KeyWordType::Then);        // THEN
+        keywords.insert("वरना".to_string(), KeyWordType::Else);       // ELSE
+        
+        // लूप्स (Loops)
+        keywords.insert("जबतक".to_string(), KeyWordType::While);     // WHILE
+        keywords.insert("अन्तजब".to_string(), KeyWordType::Wend);     // WEND (End While)
+        keywords.insert("शुरू".to_string(), KeyWordType::For);       // FOR
+        keywords.insert("तक".to_string(), KeyWordType::To);          // TO
+        keywords.insert("कदम".to_string(), KeyWordType::Step);       // STEP
+        keywords.insert("अगला".to_string(), KeyWordType::Next);       // NEXT
+        
+        // जम्प्स और यूटिलिटीज (Jumps & Utilities)
+        keywords.insert("जाओ".to_string(), KeyWordType::Goto);        // GOTO
+        keywords.insert("रैंडम".to_string(), KeyWordType::Random);    // RANDOM
+        keywords.insert("अन्त".to_string(), KeyWordType::End);        // END
+        
+        Self { keywords }
+    }
+
+    fn python_style() -> Self {
+        let mut keywords = HashMap::new();
+
+        keywords.insert("LET".to_string(), KeyWordType::Let);
+        keywords.insert("PRINT".to_string(), KeyWordType::Print);
+        keywords.insert("INPUT".to_string(), KeyWordType::Input);
+
+        keywords.insert("IF".to_string(), KeyWordType::If);
+        keywords.insert("THEN".to_string(), KeyWordType::Then);
+        keywords.insert("ELSE".to_string(), KeyWordType::Else);
+
+        keywords.insert("WHILE".to_string(), KeyWordType::While);
+        keywords.insert("ENDWHILE".to_string(), KeyWordType::Wend);
+
+        keywords.insert("FOR".to_string(), KeyWordType::For);
+        keywords.insert("IN".to_string(), KeyWordType::To);
+        keywords.insert("STEP".to_string(), KeyWordType::Step);
+        keywords.insert("ENDFOR".to_string(), KeyWordType::Next);
+
+        keywords.insert("GOTO".to_string(), KeyWordType::Goto);
+        keywords.insert("RANDOM".to_string(), KeyWordType::Random);
+        keywords.insert("QUIT".to_string(), KeyWordType::End);
+
+        Self { keywords }
+    }
+
+    fn friend_style() -> Self {
+        let mut keywords = HashMap::new();
+
+        // Variables & Operations
+        keywords.insert("SET".to_string(), KeyWordType::Let);
+        keywords.insert("CARE".to_string(), KeyWordType::Print);
+        keywords.insert("GAIN".to_string(), KeyWordType::Input);
+
+        // Conditionals
+        keywords.insert("MEAN".to_string(), KeyWordType::If);
+        keywords.insert("DEFINE".to_string(), KeyWordType::Then);
+        keywords.insert("CONCEAL".to_string(), KeyWordType::Else);
+
+        // Loops
+        keywords.insert("ROOT".to_string(), KeyWordType::While);
+        keywords.insert("REAR".to_string(), KeyWordType::Wend);
+
+        keywords.insert("MAJOR".to_string(), KeyWordType::For);
+        keywords.insert("MINOR".to_string(), KeyWordType::To);
+        keywords.insert("SPLIT".to_string(), KeyWordType::Step);
+        keywords.insert("LOCKET".to_string(), KeyWordType::Next);
+
+        // Jumps & Utilities
+        keywords.insert("CORE".to_string(), KeyWordType::Goto);
+        keywords.insert("TEMP".to_string(), KeyWordType::Random);
+        keywords.insert("HIGH".to_string(), KeyWordType::End);
+
+        Self { keywords }
+    }
+
     pub fn get_dict(name_of_dict: &str) -> SyntaxDict {
         match name_of_dict {
             "RUSSIAN" => Self::russian_style(),
@@ -289,6 +408,10 @@ impl SyntaxDict {
             "ELF" => Self::elf_style(),
             "MIX" => Self::mix_style(),
             "KUMIR" => Self::kumir_style(),
+            "FRENCH" => Self::default_french(),
+            "HINDI" => Self::default_hindi(),
+            "PYTHON" => Self::python_style(),
+            "FREN" => Self::friend_style(),
             _ => Self::default_english(),
         }
     }

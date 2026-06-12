@@ -71,15 +71,18 @@ impl<'a> Lexer<'a> {
         if let Some(spanned_comments) = self.comments_symbol(ch) {
             return spanned_comments;
         }
-
+        
+        // check for numbers
         if let Some(spanned_num) = self.number(ch) {
             return spanned_num;
         }
 
+        // check for string
         if let Some(spanned_string) = self.string(ch) {
             return spanned_string;
         }
 
+        // check for Keywords
         if let Some(spanned_keyword) = self.keyword(ch) {
             return spanned_keyword;
         }
@@ -270,7 +273,7 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    // Этот хелпер просто двигает pos вперед, пока идет слово
+    //
     fn skip_until_delimiter(&mut self) {
         let bytes = self.input.as_bytes();
         while self.pos < bytes.len() {
@@ -305,6 +308,8 @@ impl<'a> Lexer<'a> {
                 let start = self.pos;
                 self.skip_until_delimiter(); 
                 let word_str = &self.input[start..self.pos];
+                // println!("{}", word_str);
+                // println!("{:?}", self.config.keywords.get(word_str));
                 let token = if let Some(kw_type) = self.config.keywords.get(word_str) {
                     Token::KeyWord(kw_type.clone())
                 } else {

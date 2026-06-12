@@ -6,7 +6,6 @@ use basic_lexer::{io::scanner::{
 };
 
 
-
 fn main() -> Result<(), String> {
     // Find files in dir FILES
     let content_to_load = match scan_code("examples") {
