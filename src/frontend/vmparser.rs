@@ -11,19 +11,29 @@ use std::iter::Peekable;
 pub enum DataType {
     Number,
     Text,
+    Int,
+    Float,
+    Bool,
 }
 
-pub struct StringInfo<'a> {
+pub struct VarInfo<'a> {
     name: &'a str,
     data_type: DataType,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Constants {
+    Int(i64),
+    Float(f64),
+    Bool(bool),
+    Text(String),
 }
 
 pub struct Bparser<'a> {
     lexer: Peekable<IntoIter<SpannedToken<'a>>>,
     bytecode: Vec<u8>,
-    constants: Vec<i64>,       
-    variables: Vec<StringInfo<'a>>,
-    string_pool: Vec<String>,
+    constants: Vec<Constants>,       
+    variables: Vec<VarInfo<'a>>,
     current_line: usize,
     dialect: &'a SyntaxDict
 }
@@ -31,44 +41,60 @@ pub struct Bparser<'a> {
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Opcode {
+    // Stop (обычно оставляют 0x00 для завершения)
+    Stop        = 0x00,
+
     // Memory
-    LoadConst  = 0x01,  // const <- stack
-    LoadVar    = 0x02,  // var <- stack
-    LoadString = 0x03,
-    StoreVar   = 0x04,  // var -> stack
+    LoadConst   = 0x01,  // Загрузка любой константы из пула
+    LoadVar     = 0x02,  // Чтение переменной на стек
+    StoreVar    = 0x03,  // Запись со стека в переменную
 
-    // Math 
-    Add        = 0x05,
-    Sub        = 0x06,
-    Mul        = 0x07,
-    Div        = 0x08,
-    Mod        = 0x09,
-    Pow        = 0x0A,
-    Negate     = 0x0B,
+    // Math Int (i64)
+    IAdd        = 0x04,
+    ISub        = 0x05,
+    IMul        = 0x06,
+    IDiv        = 0x07,
+    IMod        = 0x08,
+    IPow        = 0x09,
+    INegate     = 0x0A,
 
-    // Compare 
-    Equal      = 0x0C,
-    NotEqual   = 0x0D,
-    Less       = 0x0E,
-    LessEq     = 0x0F,
-    Greater    = 0x10,
-    GreaterEq  = 0x11,
+    // Math Float (f64)
+    FAdd        = 0x0B,
+    FSub        = 0x0C,
+    FMul        = 0x0D,
+    FDiv        = 0x0E,
+    FMod        = 0x0F,
+    FPow        = 0x10,
+    FNegate     = 0x11,
+
+    // Compare Int
+    IEqual      = 0x12,
+    INotEqual   = 0x13,
+    ILess       = 0x14,
+    ILessEq     = 0x15,
+    IGreater    = 0x16,
+    IGreaterEq  = 0x17,
+
+    // Compare Float
+    FEqual      = 0x18,
+    FNotEqual   = 0x19,
+    FLess       = 0x1A,
+    FLessEq     = 0x1B,
+    FGreater    = 0x1C,
+    FGreaterEq  = 0x1D,
 
     // Control flow
-    Jump          = 0x12,
-    JumpIfFalse   = 0x13,
+    Jump        = 0x1E,
+    JumpIfFalse = 0x1F,
+
+    // Logic / Bool
+    And         = 0x2A, // Специально сдвинул в красивый "круглый" диапазон 40+ (0x28+)
+    Or          = 0x2B,
+    Not         = 0x2C,
 
     // IO
-    PrintNum     = 0x14,
-    PrintStr     = 0x15,
-    Input     = 0x16,
-
-    // Bool tokens
-    And       = 0x17,
-    Or        = 0x18,
-
-    // Stop
-    Stop       = 0x00,
+    Print       = 0x2D, // Один универсальный принт вместо PrintNum/PrintStr
+    Input       = 0x2E,
 }
 
 impl<'a> Bparser<'a>  {
@@ -78,7 +104,6 @@ impl<'a> Bparser<'a>  {
             bytecode: Vec::new(), 
             constants: Vec::new(), 
             variables: Vec::new(), 
-            string_pool: Vec::new(),
             current_line: 1,
             dialect
         }
@@ -94,8 +119,8 @@ impl<'a> Bparser<'a>  {
         Some(next_token.token)
     }
 
-    fn add_constant(&mut self, value: i64) -> u16 {        
-        if let Some(index) = self.constants.iter().position(|&c| c == value) {
+    fn add_constant(&mut self, value: Constants) -> u16 {        
+        if let Some(index) = self.constants.iter().position(|c| *c == value) {
             return index as u16;
         }
         self.constants.push(value);
@@ -107,7 +132,7 @@ impl<'a> Bparser<'a>  {
             self.variables[index].data_type = data_type;
             return index as u16;
         }
-        self.variables.push(StringInfo { name: value, data_type });
+        self.variables.push(VarInfo { name: value, data_type });
         (self.variables.len() - 1) as u16
     }
 
@@ -123,20 +148,12 @@ impl<'a> Bparser<'a>  {
         self.variables[var_id as usize].data_type
     }
 
-    fn add_string_const(&mut self, value: String) -> u16 {
-        if let Some(index) = self.string_pool.iter().position(|s| *s == value) {
-            return index as u16;
-        }
-        self.string_pool.push(value.to_string());
-        (self.string_pool.len() - 1) as u16
-    }
-
     fn get_num(&mut self) -> Result<i64, ErrorHandler> {    
         match self.next_token() {
-            Some(Token::Literal(Literal::Number(num))) => Ok(num),
+            Some(Token::Literal(Literal::Int(num))) => Ok(num),
             Some(Token::OpType(OpType::Minus)) => {
                 match self.next_token() {
-                    Some(Token::Literal(Literal::Number(num))) => Ok(-num),
+                    Some(Token::Literal(Literal::Int(num))) => Ok(-num),
                     _ => Err(self.easy_error("Expected number after '-'".to_string())),
                 }
             }
@@ -194,20 +211,14 @@ impl<'a> Bparser<'a>  {
         
         // Константы
         println!("\n[Constants] ({} items):", self.constants.len());
-        for (i, &c) in self.constants.iter().enumerate() {
-            println!("  [{}] = {}", i, c);
+        for (i, c) in self.constants.iter().enumerate() {
+            println!("  [{}] = {:?}", i, c);
         }
         
         // Переменные
         println!("\n[Variables] ({} items):", self.variables.len());
         for (i, v) in self.variables.iter().enumerate() {
             println!("  [{}] = {}", i, v.name);
-        }
-        
-        // String pool
-        println!("\n[String Pool] ({} items):", self.string_pool.len());
-        for (i, s) in self.string_pool.iter().enumerate() {
-            println!("  [{}] = \"{}\"", i, s);
         }
         
         // Байткод (сырой)
@@ -230,26 +241,35 @@ impl<'a> Bparser<'a>  {
         output.push((self.constants.len() & 0xFF) as u8);
         output.push((self.constants.len() >> 8) as u8);
 
-        // Constants (i64)
-        for &c in &self.constants {
-            output.extend_from_slice(&c.to_le_bytes());
+        // We push every type of constant to our Vec<u8>
+        // To separate them, we first push the unique code for every type
+        for constant in &self.constants {
+            match constant {
+                Constants::Int(num) => {
+                    output.push(0x01);
+                    output.extend_from_slice(&num.to_le_bytes());
+                },
+                Constants::Float(num) => {
+                    output.push(0x02);
+                    output.extend_from_slice(&num.to_le_bytes());
+                },
+                Constants::Bool(b) => {
+                    output.push(0x03);
+                    output.push(if *b { 1 } else { 0 });
+                },
+                Constants::Text(text) => {
+                    output.push(0x04);
+                    let text_bytes = text.as_bytes();
+                    let text_len = text_bytes.len() as u16;
+
+                    output.extend_from_slice(&text_len.to_le_bytes());
+                    output.extend_from_slice(text_bytes);
+                }
+            }
         }
 
-        // Amount of variables
         output.push((self.variables.len() & 0xFF) as u8);
         output.push((self.variables.len() >> 8) as u8);
-
-        // Amout of string constansts
-        output.push((self.string_pool.len() & 0xFF) as u8);
-        output.push((self.string_pool.len() >> 8) as u8);
-
-        for text in self.string_pool.iter()  {
-            let text_bytes = text.as_bytes();
-            let text_len = text_bytes.len() as u16;
-
-            output.extend_from_slice(&text_len.to_le_bytes());
-            output.extend_from_slice(text_bytes);
-        }
 
         output.extend_from_slice(&self.bytecode);
         output
@@ -308,11 +328,8 @@ impl<'a> Bparser<'a>  {
 
     fn parse_print(&mut self) -> Result<(), ErrorHandler> {
         self.next_token();
-        let expr_type = self.expr_bp(0)?; 
-        match expr_type {
-            DataType::Number => self.to_u8(Opcode::PrintNum as u8),
-            DataType::Text => self.to_u8(Opcode::PrintStr as u8),
-        }
+        self.expr_bp(0)?; 
+        self.to_u8(Opcode::Print as u8);
         Ok(()) 
     }
 
@@ -411,14 +428,14 @@ impl<'a> Bparser<'a>  {
         self.hard_expect(KeyWordType::To, KeyWordType::For)?;
 
         let limit = self.get_num()?;
-        let limit_id = self.add_constant(limit);
+        let limit_id = self.add_constant(Constants::Int(limit));
 
         let mut step_value = 1;
         if let Some(Token::KeyWord(KeyWordType::Step)) = self.peek_token() {
             self.next_token();
             step_value = self.get_num()?;
         }
-        let step_idx = self.add_constant(step_value);
+        let step_idx = self.add_constant(Constants::Int(step_value));
 
         let loop_start = self.bytecode.len() as u16;
 
@@ -426,9 +443,9 @@ impl<'a> Bparser<'a>  {
         self.to_u8_with_args(Opcode::LoadConst as u8, limit_id);
 
         if step_value > 0 {
-            self.to_u8(Opcode::LessEq as u8);
+            self.to_u8(Opcode::ILessEq as u8);
         } else {
-            self.to_u8(Opcode::GreaterEq as u8);
+            self.to_u8(Opcode::IGreaterEq as u8);
         }
 
         let for_jump_pos = self.bytecode.len();
@@ -444,7 +461,7 @@ impl<'a> Bparser<'a>  {
 
         self.to_u8_with_args(Opcode::LoadVar as u8, var_id);    
         self.to_u8_with_args(Opcode::LoadConst as u8, step_idx); 
-        self.to_u8(Opcode::Add as u8);                           
+        self.to_u8(Opcode::IAdd as u8);                           
         self.to_u8_with_args(Opcode::StoreVar as u8, var_id);   
 
         
@@ -459,12 +476,33 @@ impl<'a> Bparser<'a>  {
 
 
     pub fn expr_bp(&mut self, min_bp: u16) -> Result<DataType, ErrorHandler> {
-        let current_type = match self.next_token() {
-            Some(Token::Literal(Literal::Number(num))) => {
-                let idx = self.add_constant(num);
-                self.to_u8_with_args(Opcode::LoadConst as u8, idx);
-                DataType::Number
+        let mut current_type = match self.next_token() {
+            Some(Token::Literal(Literal::Int(num))) => {
+                let int_idx = self.add_constant(Constants::Int(num));
+                self.to_u8_with_args(Opcode::LoadConst as u8, int_idx);
+                DataType::Int
             },
+            Some(Token::Literal(Literal::Float(num))) => {
+                let float_idx = self.add_constant(Constants::Float(num));
+                self.to_u8_with_args(Opcode::LoadConst as u8, float_idx);
+                DataType::Float
+            },
+            Some(Token::Literal(Literal::Bool(b))) => {
+                let bool_idx = self.add_constant(Constants::Bool(b));
+                self.to_u8_with_args(Opcode::LoadConst as u8, bool_idx);
+                DataType::Bool
+            },
+            Some(Token::Literal(Literal::Ident(name))) => {
+                let var_idx = self.find_variable(name)?;
+                self.to_u8_with_args(Opcode::LoadVar as u8, var_idx);
+                let data_type = self.get_var_type(var_idx);
+                data_type
+            },
+            Some(Token::Literal(Literal::Text(t))) => {
+                let str_idx= self.add_constant(Constants::Text(t.to_string()));
+                self.to_u8_with_args(Opcode::LoadConst as u8, str_idx);
+                DataType::Text
+            }
             Some(Token::OpType(OpType::LParen)) => {
                 let inner_type = self.expr_bp(0)?;
                 if let Some(token) = self.next_token() {
@@ -473,37 +511,31 @@ impl<'a> Bparser<'a>  {
                     }
                 }
                 inner_type
-            }
+            },
             Some(Token::KeyWord(KeyWordType::Not)) => {
                 self.expr_bp(0)?;
-                let zero_idx = self.add_constant(0);
-                self.to_u8_with_args(Opcode::LoadConst as u8, zero_idx);
-                self.to_u8(Opcode::Equal as u8);
-                DataType::Number
-            }
+                self.to_u8(Opcode::Not as u8);
+                DataType::Bool
+            },
             Some(Token::OpType(op_type)) => {
                 match op_type {
                     OpType::Plus | OpType::Minus => {
-                        self.expr_bp(11)?;
-                        if op_type == OpType::Minus {
-                            self.to_u8(Opcode::Negate as u8);
+                        let num_type = self.expr_bp(11)?;
+                        if num_type != DataType::Int && num_type != DataType::Float {
+                            return Err(self.easy_error("Unary operator can only be applied to Int or Float".to_string()));
                         }
-                        DataType::Number
+                        if op_type == OpType::Minus {
+                            match num_type {
+                                DataType::Int => self.to_u8(Opcode::INegate as u8),
+                                DataType::Float => self.to_u8(Opcode::FNegate as u8),
+                                _ => return Err(self.easy_error("Unexpected tokens in Negate function".to_string()))
+                            }
+                        }
+                        num_type
                     }
                     _ => return Err(self.easy_error("Unexpected operator".to_string())),
                 }
-            }
-            Some(Token::Literal(Literal::Ident(name))) => {
-                let idx = self.find_variable(name)?;
-                self.to_u8_with_args(Opcode::LoadVar as u8, idx);
-                let data_type = self.get_var_type(idx);
-                data_type
             },
-            Some(Token::Literal(Literal::Text(t))) => {
-                let str_idx= self.add_string_const(t.to_string());
-                self.to_u8_with_args(Opcode::LoadString as u8, str_idx);
-                DataType::Text
-            }
             _ => return Err(self.easy_error("Expected number or variable".to_string())),
         };
 
@@ -529,17 +561,49 @@ impl<'a> Bparser<'a>  {
 
             let right_type = self.expr_bp(r_bp)?;
 
-            if current_type != right_type {
-                return Err(self.easy_error("Type mismatch in expression".to_string()));
-            }
+            let result_type = match op_token {
+                Token::KeyWord(KeyWordType::And) | Token::KeyWord(KeyWordType::Or) => {
+                    if current_type != DataType::Bool || right_type != DataType::Bool {
+                        return Err(self.easy_error("Logical operators expect Boolean expressions".to_string()));
+                    }
+                    DataType::Bool
+                },
+                Token::CmpOp(_) => {
+                    if current_type != right_type {
+                        return Err(self.easy_error("Cannot compare different types".to_string()));
+                    }
+                    DataType::Bool 
+                },
+                Token::OpType(_) => {
+                    if current_type != right_type {
+                        return Err(self.easy_error("Type mismatch in math expression".to_string()));
+                    }
+                    current_type 
+                },
+                _ => unreachable!(),
+            };
 
             match op_token {
-                Token::OpType(token) => self.to_u8(token.to_opcode() as u8),
-                Token::CmpOp(token) => self.to_u8(token.to_opcode() as u8),
                 Token::KeyWord(KeyWordType::And) => self.to_u8(Opcode::And as u8),
                 Token::KeyWord(KeyWordType::Or) => self.to_u8(Opcode::Or as u8),
+                Token::CmpOp(token) => {
+                    match current_type {
+                        DataType::Int => self.to_u8(token.to_opcode_int() as u8),
+                        DataType::Float => self.to_u8(token.to_opcode_float() as u8),
+                        _ => return Err(self.easy_error("Invalid operation for this data type".to_string())),
+                    }
+                } 
+                Token::OpType(op_type) => {
+                    match current_type {
+                        DataType::Int => self.to_u8(op_type.to_opcode_int() as u8),
+                        DataType::Float => self.to_u8(op_type.to_opcode_float() as u8),
+                        _ => return Err(self.easy_error("Invalid operation for this data type".to_string())),
+                    }
+                },
                 _ => unreachable!(),
             }
+
+            current_type = result_type
         }
         Ok(current_type)
     }

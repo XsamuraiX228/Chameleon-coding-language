@@ -47,16 +47,30 @@ pub enum CmpOp {
 }
 
 impl OpType {
-    pub fn to_opcode(&self) -> Opcode {
+    pub fn to_opcode_int(&self) -> Opcode {
         match self {
-            OpType::Plus => Opcode::Add,
-            OpType::Minus => Opcode::Sub,
-            OpType::Multiply => Opcode::Mul,
-            OpType::Divide => Opcode::Div,
-            OpType::Mod => Opcode::Mod,
-            OpType::Power => Opcode::Pow,
+            OpType::Plus => Opcode::IAdd,
+            OpType::Minus => Opcode::ISub,
+            OpType::Multiply => Opcode::IMul,
+            OpType::Divide => Opcode::IDiv,
+            OpType::Mod => Opcode::IMod,
+            OpType::Power => Opcode::IPow,
             _ => {
-                println!("Error, Math");
+                println!("Error, Int Math");
+                unreachable!()
+            },
+        }
+    }
+    pub fn to_opcode_float(&self) -> Opcode {
+        match self {
+            OpType::Plus => Opcode::FAdd,
+            OpType::Minus => Opcode::FPow,
+            OpType::Multiply => Opcode::FMul,
+            OpType::Divide => Opcode::FDiv,
+            OpType::Mod => Opcode::FMod,
+            OpType::Power => Opcode::FPow,
+            _ => {
+                println!("Error, Float Math");
                 unreachable!()
             },
         }
@@ -64,29 +78,46 @@ impl OpType {
 }
 
 impl CmpOp {
-    pub fn to_opcode(&self) -> Opcode {
+    pub fn to_opcode_int(&self) -> Opcode {
         match self {
-            CmpOp::DoubleEqual => Opcode::Equal,
-            CmpOp::Less => Opcode::Less,
-            CmpOp::Greater => Opcode::Greater,
-            CmpOp::NonEqual => Opcode::NotEqual,
-            CmpOp::GreaterEqual => Opcode::GreaterEq,
-            CmpOp::LessEqual => Opcode::LessEq,
+            CmpOp::DoubleEqual => Opcode::IEqual,
+            CmpOp::NonEqual => Opcode::INotEqual,
+            CmpOp::Less => Opcode::ILess,
+            CmpOp::LessEqual => Opcode::ILessEq,
+            CmpOp::Greater => Opcode::IGreater,
+            CmpOp::GreaterEqual => Opcode::IGreaterEq,
             _ => {
-                println!("Error, Compare");
+                println!("Error, Int Compare");
+                unreachable!()
+            },
+        }
+    }
+    pub fn to_opcode_float(&self) -> Opcode {
+        match self {
+            CmpOp::DoubleEqual => Opcode::FEqual,
+            CmpOp::NonEqual => Opcode::FNotEqual,
+            CmpOp::Less => Opcode::FLess,
+            CmpOp::LessEqual => Opcode::FLessEq,
+            CmpOp::Greater => Opcode::FGreater,
+            CmpOp::GreaterEqual => Opcode::FGreaterEq,
+            _ => {
+                println!("Error, Int Compare");
                 unreachable!()
             },
         }
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Literal<'a> {
     Ident(&'a str), // simple string
     Text(&'a str),
     Number(i64),  // i64 number
+    Int(i64),
+    Float(f64),
+    Bool(bool),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token<'a> {   
     KeyWord(KeyWordType),
     OpType(OpType),
@@ -138,6 +169,9 @@ impl<'a> fmt::Display for Literal<'a> {
             Literal::Ident(name) => write!(f, "Ident({})", name),
             Literal::Text(text) => write!(f, "Text(\"{}\")", text),
             Literal::Number(n) => write!(f, "Number({})", n),
+            Literal::Int(n) => write!(f, "Integer({})", n),
+            Literal::Float(n) => write!(f, "Float({})", n),
+            Literal::Bool(n) => write!(f, "Bool({})", n),
         }
     }
 }
@@ -161,7 +195,7 @@ impl fmt::Display for KeyWordType {
             KeyWordType::End => "END",
             KeyWordType::And => "AND",
             KeyWordType::Or => "OR",
-            KeyWordType::Not => "NOT"
+            KeyWordType::Not => "NOT",
         };
         write!(f, "{}", s)
     }

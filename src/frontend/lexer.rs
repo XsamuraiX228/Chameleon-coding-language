@@ -1,8 +1,9 @@
 use crate::dialect::{SyntaxDict};
-use super::token::{Token, CmpOp, OpType, Literal};
+use crate::frontend::token::Literal;
+use super::token::{Token, CmpOp, OpType};
 use super::token::VALID_OPERATORS;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SpannedToken<'a> {
     pub token: Token<'a>,
     pub line: usize,
@@ -232,21 +233,32 @@ impl<'a> Lexer<'a> {
             return None;
         }
 
+        let mut is_float = false;
         let token_line = self.current_line;
         let bytes = self.input.as_bytes();
         let start = self.pos;
 
-        while self.pos < bytes.len() && (bytes[self.pos] as char).is_ascii_digit() {
+        while self.pos < bytes.len() && ((bytes[self.pos] as char).is_ascii_digit() || bytes[self.pos] == b'.') {
+            if bytes[self.pos] == b'.' {
+                is_float = true;
+            }
             self.pos += 1;
         }
 
         let num_str = &self.input[start..self.pos];
-        let number = num_str.parse::<i64>().unwrap();
-
-        Some(SpannedToken {
-            token: Token::Literal(Literal::Number(number)),
-            line: token_line,
-        })
+        if !is_float {
+            let int_number = num_str.parse::<i64>().unwrap();
+            return  Some(SpannedToken {
+                token: Token::Literal(Literal::Int(int_number)),
+                line: token_line,
+            });
+        } else {
+            let float_number = num_str.parse::<f64>().unwrap();
+            return Some(SpannedToken {
+                token: Token::Literal(Literal::Float(float_number)),
+                line: token_line,
+            });
+        }
     }
 
     fn string(&mut self, ch: char) -> Option<SpannedToken<'a>> {
@@ -310,13 +322,17 @@ impl<'a> Lexer<'a> {
                 let word_str = &self.input[start..self.pos];
                 // println!("{}", word_str);
                 // println!("{:?}", self.config.keywords.get(word_str));
-                let token = if let Some(kw_type) = self.config.keywords.get(word_str) {
+                let key_token = if let Some(kw_type) = self.config.keywords.get(word_str) {
                     Token::KeyWord(kw_type.clone())
                 } else {
-                    Token::Literal(Literal::Ident(word_str))
+                    let type_token = match word_str {
+                        "TRUE" => Token::Literal(Literal::Bool(true)),
+                        "FALSE" => Token::Literal(Literal::Bool(false)),
+                        _ => Token::Literal(Literal::Ident(word_str)),
+                    };
+                    return Some(SpannedToken { token: type_token, line: token_line });
                 };
-
-                Some(SpannedToken { token, line: token_line })
+                Some(SpannedToken { token: key_token, line: token_line })
             }
         }
     }
