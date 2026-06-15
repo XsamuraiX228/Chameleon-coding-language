@@ -40,14 +40,13 @@ pub struct Bparser<'a> {
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Opcode {
-    // Stop (обычно оставляют 0x00 для завершения)
+    // Stop 
     Stop        = 0x00,
 
     // Memory
-    LoadConst   = 0x01,  // Загрузка любой константы из пула
-    LoadVar     = 0x02,  // Чтение переменной на стек
-    StoreVar    = 0x03,  // Запись со стека в переменную
-
+    LoadConst   = 0x01,  
+    LoadVar     = 0x02,  
+    StoreVar    = 0x03,  
     // Math Int (i64)
     IAdd        = 0x04,
     ISub        = 0x05,
@@ -87,12 +86,12 @@ pub enum Opcode {
     JumpIfFalse = 0x1F,
 
     // Logic / Bool
-    And         = 0x2A, // Специально сдвинул в красивый "круглый" диапазон 40+ (0x28+)
+    And         = 0x2A, 
     Or          = 0x2B,
     Not         = 0x2C,
 
     // IO
-    Print       = 0x2D, // Один универсальный принт вместо PrintNum/PrintStr
+    Print       = 0x2D, 
     Input       = 0x2E,
 }
 
