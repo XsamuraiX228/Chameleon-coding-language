@@ -35,28 +35,91 @@ src/
 Make sure you have [Rust and Cargo](https://rustup.rs/) installed.
 
 ### Running a Script
-To execute a custom program, write you file in examples and type in console:
+Here is the code, which shows all current instruments which language provide:
 ```bash
 cargo run
 ```
 Example of a file:
 ```rust
-#mode "ENGLISH"
-LET X = 1
-WHILE X <= 10 THEN
-    IF X % 2 == 0 THEN
-        PRINT X
-        PRINT " is even"
+// BLOCK 1: (LET)
+
+LET int_var = 10
+LET float_var = 45.67
+LET bool_var1 = TRUE
+LET bool_var2 = FALSE
+LET text_var = "HELLO WORLD"
+
+// Check PRINT 
+PRINT text_var
+PRINT int_var
+PRINT float_var
+
+
+// BLOCK 2: (++ / --)
+
+int_var++
+float_var--
+PRINT int_var    // 11
+PRINT float_var  // 44.67
+
+
+// BLOCK 3: Math
+
+LET math_res = (int_var * 2) + 100 % 3
+PRINT math_res
+
+LET pi_approx = 314159
+LET radius = 5
+LET circumference_approx = (2 * pi_approx * radius) / 100000
+PRINT circumference_approx
+
+
+// BLOCK 4: logic (IF / ELSE / AND / OR)
+
+
+IF int_var == 11 AND bool_var1 THEN
+    PRINT "Strict logic stage 1: PASSED"
+ELSE
+    PRINT "Strict logic stage 1: FAILED"
+END
+
+IF bool_var2 OR 5 > 10 THEN
+    PRINT "Strict logic stage 2: FAILED"
+ELSE
+    PRINT "Strict logic stage 2: PASSED"
+END
+
+
+// BLOCK 5: Conditions with ELSE blocks
+
+LET score = 85
+IF score >= 90 THEN
+    PRINT "Grade: A"
+ELSE
+    IF score >= 80 THEN
+        PRINT "Grade: B"  
     ELSE
-        PRINT X
-        PRINT " is odd"
+        PRINT "Grade: C"
     END
-    IF X == 5 THEN
-        PRINT "Halfway there!"
-    END
-    LET X = X + 1
+END
+
+
+// BLOCK 6: Loops (WHILE и FOR)
+
+
+LET iterator = 1.0
+WHILE iterator <= 3.0 THEN
+    PRINT iterator
+    LET iterator = iterator + 0.5
 WEND
-PRINT "Done!"
+
+
+LET sum_accumulator = 0
+FOR N = 1 TO 5
+    PRINT N
+    LET sum_accumulator = sum_accumulator + N
+NEXT
+PRINT sum_accumulator // 15
 ```
 Writing '#mode "DICT NAME" is specific, because lexer needs to understand what Dictionary is used at the moment'
 
