@@ -89,7 +89,7 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
     // Creating parser
     let mut parser = Bparser::new(tokens, &config);
     // First we create raw_bytecode - it's not optimized and it's Vec<u16>
-    let raw_bytecode = parser.start_byteparsing().map_err(|e| format!("Parser Error: {}", e))?;
+    let raw_bytecode = parser.start_byteparsing().map_err(|e| format!("{}", e))?;
     parser.debug_dump();
     fs::write("program.bin", &raw_bytecode).expect("Failed to write bytecode");
     // Run our sliced code

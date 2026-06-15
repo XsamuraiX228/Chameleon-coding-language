@@ -26,6 +26,6 @@ impl fmt::Display for ErrorHandler {
             ErrorKind::Syntax  => "Syntax Error",
             ErrorKind::Runtime => "Runtime Error",
         };
-        write!(f, "[{}] on line {}: {}", prefix, self.line, self.error)
+        write!(f, "{}: {}, line {}", prefix, self.error, self.line)
     }
 }

@@ -183,12 +183,11 @@ impl<'a> Lexer<'a> {
 
     fn math_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
         let token_line = self.current_line;
+        let bytes = self.input.as_bytes();
         match ch {
             op if VALID_OPERATORS.contains(&op) => {
                 self.pos += 1;
                 let op_type = match ch {
-                    '+' => OpType::Plus,
-                    '-' => OpType::Minus,
                     '*' => OpType::Multiply,
                     '%' => OpType::Mod,
                     '^' => OpType::Power,
@@ -200,6 +199,26 @@ impl<'a> Lexer<'a> {
                     token: Token::OpType(op_type),
                     line: token_line,
                 })
+            }
+            '+' => {
+                let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'+' {
+                    self.pos += 2;
+                    Token::OpType(OpType::Increment)
+                } else {
+                    self.pos += 1;
+                    Token::OpType(OpType::Plus)
+                };
+                Some(SpannedToken { token, line: token_line })
+            },
+            '-' => {
+                let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'-' {
+                    self.pos += 2;
+                    Token::OpType(OpType::Decrement)
+                } else {
+                    self.pos += 1;
+                    Token::OpType(OpType::Minus)
+                };
+                Some(SpannedToken { token, line: token_line })
             }
             _ => return None
         }
@@ -295,6 +314,8 @@ impl<'a> Lexer<'a> {
                     || current_char == '!'
                     || current_char == ';'
                     || current_char == ':' 
+                    || current_char == '+'
+                    || current_char == '-'
                     || VALID_OPERATORS.contains(&current_char)
                 {
                     break;
@@ -307,15 +328,6 @@ impl<'a> Lexer<'a> {
     fn keyword(&mut self, ch: char) -> Option<SpannedToken<'a>> {
         let token_line = self.current_line;
         match ch {
-            ':' => {
-                self.pos += 1;
-                let start = self.pos;
-                self.skip_until_delimiter(); 
-                Some(SpannedToken {
-                    token: Token::Mark(&self.input[start..self.pos]),
-                    line: token_line,
-                })
-            }
             _ => {
                 let start = self.pos;
                 self.skip_until_delimiter(); 

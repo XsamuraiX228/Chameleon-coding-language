@@ -9,7 +9,6 @@ use std::iter::Peekable;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DataType {
-    Number,
     Text,
     Int,
     Float,
@@ -295,11 +294,25 @@ impl<'a> Bparser<'a>  {
             Some(Token::Newline) => {
                 self.next_token();
                 Ok(())
-            }
+            },
             Some(Token::EOF) => {
                 self.next_token();
                 Ok(())
-            }
+            },
+            Some(Token::Literal(Literal::Ident(_))) => {
+                let variable = self.next_token().unwrap();
+                let is_inc_dec = match self.peek_token() {
+                    Some(Token::OpType(OpType::Increment)) => true,
+                    Some(Token::OpType(OpType::Decrement)) => true,
+                    _ => false
+                };
+                if is_inc_dec {
+                    if let Token::Literal(Literal::Ident(name)) = variable {
+                        self.increment_decrement(name)?;
+                    }
+                }
+                Ok(())
+            },
             None => Ok(()),
             Some(t) => {
                 let token_clone = t.clone(); 
@@ -420,7 +433,7 @@ impl<'a> Bparser<'a>  {
 
         // Read var name
         let var = self.get_name()?;
-        let var_id = self.add_variable(var, DataType::Number);
+        let var_id = self.add_variable(var, DataType::Int);
         self.expect(Token::CmpOp(CmpOp::Equal))?;
         self.expr_bp(0)?;
 
@@ -474,6 +487,54 @@ impl<'a> Bparser<'a>  {
         Ok(())
     }
 
+    fn increment_decrement(&mut self, var_name: &'a str) -> Result<(), ErrorHandler> {
+        let var_idx = self.find_variable(var_name)?;
+        let token = self.peek_token();
+        match token {
+            Some(Token::OpType(OpType::Increment)) => {
+                self.next_token();
+                self.to_u8_with_args(Opcode::LoadVar as u8, var_idx);
+                let var_type = self.get_var_type(var_idx);
+                match var_type {
+                    DataType::Int => {
+                        let const_idx = self.add_constant(Constants::Int(1));
+                        self.to_u8_with_args(Opcode::LoadConst as u8, const_idx);
+                        self.to_u8(Opcode::IAdd as u8);
+                        self.to_u8_with_args(Opcode::StoreVar as u8, var_idx);
+                    }
+                    DataType::Float => {
+                        let const_idx = self.add_constant(Constants::Float(1.0));
+                        self.to_u8_with_args(Opcode::LoadConst as u8, const_idx);
+                        self.to_u8(Opcode::FAdd as u8);
+                        self.to_u8_with_args(Opcode::StoreVar as u8, var_idx);
+                    }
+                    _ => return Err(self.easy_error("Increment can only be applied to Int or Float".to_string()))
+                }
+            },
+            Some(Token::OpType(OpType::Decrement)) => {
+                self.next_token();
+                self.to_u8_with_args(Opcode::LoadVar as u8, var_idx);
+                let var_type = self.get_var_type(var_idx);
+                match var_type {
+                    DataType::Int => {
+                        let const_idx = self.add_constant(Constants::Int(-1));
+                        self.to_u8_with_args(Opcode::LoadConst as u8, const_idx);
+                        self.to_u8(Opcode::IAdd as u8);
+                        self.to_u8_with_args(Opcode::StoreVar as u8, var_idx);
+                    }
+                    DataType::Float => {
+                        let const_idx = self.add_constant(Constants::Float(-1.0));
+                        self.to_u8_with_args(Opcode::LoadConst as u8, const_idx);
+                        self.to_u8(Opcode::FAdd as u8);
+                        self.to_u8_with_args(Opcode::StoreVar as u8, var_idx);
+                    }
+                    _ => return Err(self.easy_error("Decrement can only be applied to Int or Float".to_string()))
+                }
+            },
+            _ => return Err(self.easy_error("Expected '++' or '--' after variable name".to_string()))
+        }
+        Ok(())
+    }
 
     pub fn expr_bp(&mut self, min_bp: u16) -> Result<DataType, ErrorHandler> {
         let mut current_type = match self.next_token() {
@@ -576,6 +637,8 @@ impl<'a> Bparser<'a>  {
                 },
                 Token::OpType(_) => {
                     if current_type != right_type {
+                        println!("{:?}", current_type);
+                        println!("{:?}", right_type);
                         return Err(self.easy_error("Type mismatch in math expression".to_string()));
                     }
                     current_type 

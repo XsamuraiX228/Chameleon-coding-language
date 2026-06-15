@@ -1,4 +1,4 @@
-pub const VALID_OPERATORS: [char; 7] = ['+', '-', '*', '%', '^', '(', ')'];
+pub const VALID_OPERATORS: [char; 5] = ['*', '%', '^', '(', ')'];
 use super::vmparser::Opcode;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyWordType {
@@ -33,6 +33,8 @@ pub enum OpType {
     Factorial,
     LParen,
     RParen,
+    Increment,
+    Decrement,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,6 +147,8 @@ impl fmt::Display for OpType {
             OpType::Factorial => "!",
             OpType::LParen => "(",
             OpType::RParen => ")",
+            OpType::Increment => "++",
+            OpType::Decrement => "--",
         };
         write!(f, "{}", s)
     }

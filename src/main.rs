@@ -32,7 +32,10 @@ fn main() -> Result<(), String> {
     };
 
     // run_pipeline(&code)?;
-    run_rvmpipeline(&code)?;
+    if let Err(pipeline_error) = run_rvmpipeline(&code) {
+        // Ипользуем eprintln! (печать в поток ошибок), выводится чистый текст БЕЗ кавычек!
+        println!("{}", pipeline_error); 
+    }
     Ok(())
 }
 
