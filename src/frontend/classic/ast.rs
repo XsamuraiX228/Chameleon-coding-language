@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use super::token::OpType;
+use crate::frontend::token::OpType;
 #[derive(Debug, PartialEq)]
 pub enum Expression<'a> {
     Atom(i64),

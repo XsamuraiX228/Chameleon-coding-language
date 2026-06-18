@@ -1,7 +1,7 @@
-use crate::dialect::{SyntaxDict};
+use crate::frontend::token::VALID_OPERATORS;
+use crate::frontend::token::{CmpOp, OpType, Token};
+use crate::dialect::SyntaxDict;
 use crate::frontend::token::Literal;
-use super::token::{Token, CmpOp, OpType};
-use super::token::VALID_OPERATORS;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpannedToken<'a> {
@@ -22,7 +22,7 @@ impl<'a> Lexer<'a> {
             input: input,
             pos: 0,
             config,
-            current_line: number
+            current_line: number,
         }
     }
 
@@ -34,9 +34,9 @@ impl<'a> Lexer<'a> {
     }
 
     fn current_char(&self) -> Option<char> {
-       if self.pos >= self.input.len() {
-        return None;
-    }
+        if self.pos >= self.input.len() {
+            return None;
+        }
         // Безопасно берем следующий символ, учитывая UTF-8
         self.input[self.pos..].chars().next()
     }
@@ -45,14 +45,22 @@ impl<'a> Lexer<'a> {
         self.skip_whitespace();
 
         if self.pos > self.input.len() {
-            return SpannedToken { token: Token::EOF, line: self.current_line };
+            return SpannedToken {
+                token: Token::EOF,
+                line: self.current_line,
+            };
         }
 
         let ch = match self.current_char() {
             Some(c) => c,
-            None => return SpannedToken { token: Token::EOF, line: self.current_line },
+            None => {
+                return SpannedToken {
+                    token: Token::EOF,
+                    line: self.current_line,
+                };
+            }
         };
-        
+
         // check specila symbols \r , \n, ;
         if let Some(spanned_newline) = self.newline_symbols(ch) {
             return spanned_newline;
@@ -72,7 +80,7 @@ impl<'a> Lexer<'a> {
         if let Some(spanned_comments) = self.comments_symbol(ch) {
             return spanned_comments;
         }
-        
+
         // check for numbers
         if let Some(spanned_num) = self.number(ch) {
             return spanned_num;
@@ -88,14 +96,14 @@ impl<'a> Lexer<'a> {
             return spanned_keyword;
         }
 
-        let unexpected = SpannedToken { 
-            token: Token::Unexpected(ch), 
-            line: self.current_line 
+        let unexpected = SpannedToken {
+            token: Token::Unexpected(ch),
+            line: self.current_line,
         };
-        
+
         // Продвигаем курсор вперед, чтобы не зациклиться на ошибке
-        self.pos += ch.len_utf8(); 
-        
+        self.pos += ch.len_utf8();
+
         unexpected
     }
 
@@ -129,7 +137,7 @@ impl<'a> Lexer<'a> {
                     line: token_line,
                 })
             }
-            _ => return None
+            _ => return None,
         }
     }
 
@@ -145,7 +153,10 @@ impl<'a> Lexer<'a> {
                     self.pos += 1;
                     Token::CmpOp(CmpOp::Equal)
                 };
-                Some(SpannedToken { token, line: token_line })
+                Some(SpannedToken {
+                    token,
+                    line: token_line,
+                })
             }
             '!' => {
                 let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
@@ -155,7 +166,10 @@ impl<'a> Lexer<'a> {
                     self.pos += 1;
                     Token::OpType(OpType::Factorial)
                 };
-                Some(SpannedToken { token, line: token_line })
+                Some(SpannedToken {
+                    token,
+                    line: token_line,
+                })
             }
             '<' => {
                 let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
@@ -165,7 +179,10 @@ impl<'a> Lexer<'a> {
                     self.pos += 1;
                     Token::CmpOp(CmpOp::Less)
                 };
-                Some(SpannedToken { token, line: token_line })
+                Some(SpannedToken {
+                    token,
+                    line: token_line,
+                })
             }
             '>' => {
                 let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
@@ -175,9 +192,12 @@ impl<'a> Lexer<'a> {
                     self.pos += 1;
                     Token::CmpOp(CmpOp::Greater)
                 };
-                Some(SpannedToken { token, line: token_line })
+                Some(SpannedToken {
+                    token,
+                    line: token_line,
+                })
             }
-            _ => return None
+            _ => return None,
         }
     }
 
@@ -204,23 +224,35 @@ impl<'a> Lexer<'a> {
                 let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'+' {
                     self.pos += 2;
                     Token::OpType(OpType::Increment)
+                } else if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
+                    self.pos += 2;
+                    Token::OpType(OpType::IncEqual)
                 } else {
                     self.pos += 1;
                     Token::OpType(OpType::Plus)
                 };
-                Some(SpannedToken { token, line: token_line })
-            },
+                Some(SpannedToken {
+                    token,
+                    line: token_line,
+                })
+            }
             '-' => {
                 let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'-' {
                     self.pos += 2;
                     Token::OpType(OpType::Decrement)
+                } else if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
+                    self.pos += 2;
+                    Token::OpType(OpType::DecEqual)
                 } else {
                     self.pos += 1;
                     Token::OpType(OpType::Minus)
                 };
-                Some(SpannedToken { token, line: token_line })
+                Some(SpannedToken {
+                    token,
+                    line: token_line,
+                })
             }
-            _ => return None
+            _ => return None,
         }
     }
 
@@ -243,7 +275,7 @@ impl<'a> Lexer<'a> {
                     line: token_line,
                 })
             }
-            _ => return None
+            _ => return None,
         }
     }
 
@@ -257,7 +289,9 @@ impl<'a> Lexer<'a> {
         let bytes = self.input.as_bytes();
         let start = self.pos;
 
-        while self.pos < bytes.len() && ((bytes[self.pos] as char).is_ascii_digit() || bytes[self.pos] == b'.') {
+        while self.pos < bytes.len()
+            && ((bytes[self.pos] as char).is_ascii_digit() || bytes[self.pos] == b'.')
+        {
             if bytes[self.pos] == b'.' {
                 is_float = true;
             }
@@ -267,7 +301,7 @@ impl<'a> Lexer<'a> {
         let num_str = &self.input[start..self.pos];
         if !is_float {
             let int_number = num_str.parse::<i64>().unwrap();
-            return  Some(SpannedToken {
+            return Some(SpannedToken {
                 token: Token::Literal(Literal::Int(int_number)),
                 line: token_line,
             });
@@ -287,8 +321,8 @@ impl<'a> Lexer<'a> {
 
         let token_line = self.current_line;
         let bytes = self.input.as_bytes();
-        
-        self.pos += 1; 
+
+        self.pos += 1;
         let start = self.pos;
 
         while self.pos < bytes.len() && bytes[self.pos] != b'"' {
@@ -296,7 +330,7 @@ impl<'a> Lexer<'a> {
         }
 
         let text_str = &self.input[start..self.pos];
-        self.pos += 1; 
+        self.pos += 1;
 
         Some(SpannedToken {
             token: Token::Literal(Literal::Text(text_str)),
@@ -313,7 +347,7 @@ impl<'a> Lexer<'a> {
                     || current_char == '='
                     || current_char == '!'
                     || current_char == ';'
-                    || current_char == ':' 
+                    || current_char == ':'
                     || current_char == '+'
                     || current_char == '-'
                     || VALID_OPERATORS.contains(&current_char)
@@ -330,7 +364,7 @@ impl<'a> Lexer<'a> {
         match ch {
             _ => {
                 let start = self.pos;
-                self.skip_until_delimiter(); 
+                self.skip_until_delimiter();
                 let word_str = &self.input[start..self.pos];
                 // println!("{}", word_str);
                 // println!("{:?}", self.config.keywords.get(word_str));
@@ -342,13 +376,18 @@ impl<'a> Lexer<'a> {
                         "FALSE" => Token::Literal(Literal::Bool(false)),
                         _ => Token::Literal(Literal::Ident(word_str)),
                     };
-                    return Some(SpannedToken { token: type_token, line: token_line });
+                    return Some(SpannedToken {
+                        token: type_token,
+                        line: token_line,
+                    });
                 };
-                Some(SpannedToken { token: key_token, line: token_line })
+                Some(SpannedToken {
+                    token: key_token,
+                    line: token_line,
+                })
             }
         }
     }
-
 
     pub fn tokenize(&mut self) -> Vec<SpannedToken<'a>> {
         let mut tokens = Vec::new();
@@ -356,8 +395,8 @@ impl<'a> Lexer<'a> {
         loop {
             let spanned = self.next_token();
             if let Token::EOF = spanned.token {
-                tokens.push(spanned); 
-                break;               
+                tokens.push(spanned);
+                break;
             }
             tokens.push(spanned);
         }
@@ -368,12 +407,7 @@ impl<'a> Lexer<'a> {
         let tokens = self.tokenize();
         println!("\n=== DEBUG: Spanned Tokens ===\n");
         for (i, spanned) in tokens.iter().enumerate() {
-            println!(
-                "{:3} | Line {:3} | {:?}",
-                i,
-                spanned.line,
-                spanned.token
-            );
+            println!("{:3} | Line {:3} | {:?}", i, spanned.line, spanned.token);
         }
         println!("\nTotal tokens: {}", tokens.len());
     }

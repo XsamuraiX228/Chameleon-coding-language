@@ -1,8 +1,8 @@
-use crate::frontend::ast::Statement;
+use super::ast::Statement;
 use crate::frontend::lexer::SpannedToken;
 use crate::frontend::token::KeyWordType;
 use crate::diagnostic::diagnostic::{ErrorHandler, ErrorKind};
-use super::token::{Token, CmpOp, OpType, Literal};
+use crate::frontend::token::{Token, CmpOp, OpType, Literal};
 use super::ast::Expression;
 use crate::dialect::SyntaxDict;
 use std::vec::IntoIter;
@@ -350,7 +350,7 @@ impl<'a> Parser<'a> {
     // e.g LET X = 5 + (9 * 6)^2
     pub fn expr_bp(&mut self, min_bp: u8) -> Result<Expression<'a>, ErrorHandler> {
         let mut lhs = match self.next() {
-            Some(Token::Literal(Literal::Number(num))) => Expression::Atom(num),
+            Some(Token::Literal(Literal::Int(num))) => Expression::Atom(num),
             Some(Token::OpType(OpType::LParen)) => {
                 let lhs = self.expr_bp(0)?;
                 if self.next() != Some(Token::OpType(OpType::RParen)) {
@@ -372,7 +372,9 @@ impl<'a> Parser<'a> {
             }
             Some(Token::Literal(Literal::Ident(name))) => Expression::Variable(name),
             Some(Token::Literal(Literal::Text(_))) => return Err(self.easy_error("Strings are not allowed in math expressions".to_string())),
-            _ => return Err(self.easy_error("Expected number, variable or prefix operator".to_string())),
+            t => {
+                println!("{}", t.unwrap());
+                return Err(self.easy_error("Expected number, variable or prefix operator".to_string())) },
         }; 
 
         loop {

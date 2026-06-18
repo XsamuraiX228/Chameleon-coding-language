@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::frontend::ast::Statement;
+use crate::frontend::classic::ast::Statement;
 
 use rand::Rng;
 #[derive(Debug, PartialEq)]

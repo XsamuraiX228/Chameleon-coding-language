@@ -1,21 +1,22 @@
 use crate::{
-    dialect::SyntaxDict, 
-    frontend::{lexer::Lexer, parser::Parser,vrmachine::VirtualMachine, vmparser::Bparser},
+    dialect::SyntaxDict,
+    frontend::vm::{parser::bparser::Bparser, vrmachine::VirtualMachine},
+    frontend::{lexer::Lexer, classic::parser::Parser},
     runtime::interpreter::Interpreter,
-    
 };
+pub mod diagnostic;
 pub mod dialect;
 pub mod frontend;
+pub mod io;
 pub mod runtime;
-pub mod io; 
-pub mod diagnostic;
 use std::fs;
+
 
 /// Run the code (Preprocessor -> Lexer -> Parser -> Interprenter)
 pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
     // 1. Looking for #mode and set dialect::SyntaxDict
     let mut config = SyntaxDict::get_dict("ENGLISH");
-    
+
     // Variable-pointer to the part of the parsing code
     let mut code_to_parse = raw_code;
     let mut line_counter = 1;
@@ -25,9 +26,12 @@ pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
             line_counter += 1;
             if let (Some(start_quote), Some(end_quote)) = (trimmed.find('"'), trimmed.rfind('"')) {
                 if start_quote != end_quote {
-                    let dict_name = &trimmed[start_quote + 1..end_quote]; 
-                    config = SyntaxDict::get_dict(dict_name); 
-                    println!("[Preprocessor]: Dictionary for language successfully connected: {}", dict_name);
+                    let dict_name = &trimmed[start_quote + 1..end_quote];
+                    config = SyntaxDict::get_dict(dict_name);
+                    println!(
+                        "[Preprocessor]: Dictionary for language successfully connected: {}",
+                        dict_name
+                    );
                 }
             }
             if let Some(pos) = raw_code.find('\n') {
@@ -57,10 +61,11 @@ pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// VM Machine
+/// Run the code (Preprocessor -> Lexer -> BParser -> Compiler)
 pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
     let mut config = SyntaxDict::get_dict("ENGLISH");
-    
-    
+
     let mut code_to_parse = raw_code;
     let mut line_counter = 1;
 
@@ -71,9 +76,12 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
             line_counter += 1;
             if let (Some(start_quote), Some(end_quote)) = (trimmed.find('"'), trimmed.rfind('"')) {
                 if start_quote != end_quote {
-                    let dict_name = &trimmed[start_quote + 1..end_quote]; 
-                    config = SyntaxDict::get_dict(dict_name); 
-                    println!("[VM Preprocessor]: Dictionary for language successfully connected: {}", dict_name);
+                    let dict_name = &trimmed[start_quote + 1..end_quote];
+                    config = SyntaxDict::get_dict(dict_name);
+                    println!(
+                        "[VM Preprocessor]: Dictionary for language successfully connected: {}",
+                        dict_name
+                    );
                 }
             }
             if let Some(pos) = raw_code.find('\n') {
@@ -88,7 +96,6 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
     let tokens = lexer.tokenize();
     // Creating parser
     let mut parser = Bparser::new(tokens, &config);
-    // First we create raw_bytecode - it's not optimized and it's Vec<u16>
     let raw_bytecode = parser.start_byteparsing().map_err(|e| format!("{}", e))?;
     parser.debug_dump();
     fs::write("program.bin", &raw_bytecode).expect("Failed to write bytecode");
@@ -98,3 +105,8 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
 
     Ok(())
 }
+
+// ============================================
+// ПРОСТОЙ БЕНЧМАРК
+// ============================================
+

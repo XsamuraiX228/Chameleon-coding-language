@@ -1,41 +1,57 @@
-use basic_lexer::{io::scanner::{
-    load_code,
-    scan_code,}, 
-    // run_pipeline,
+use basic_lexer::{
+    // io::scanner::{
+    // load_code,
+    // scan_code,}, 
+    run_pipeline,
     run_rvmpipeline,
+    
 };
 
+use std::time::Instant;
 
-fn main() -> Result<(), String> {
-    // Find files in dir FILES
-    let content_to_load = match scan_code("examples") {
-        Ok(files) => files,
-        Err(e) => {
-            return Err(format!("[Scanning error]: {}", e));
-        }
-    };
 
-    // 2. Get file.bsa
-    let path = match content_to_load.first() {
-        Some(p) => p,
-        None => { 
-            return Err(format!("[Error]: No files with extension found in folder 'FILES' .bsa")); 
-        }
-    };
+fn main() {
+    let program = r#"
+        LET SUM = 0
+        LET I = 1
+        WHILE I <= 1000000 THEN
+            LET SUM = SUM + I
+            LET I = I + 1
+        WEND
+        PRINT SUM
+    "#;
 
-    // 3. Loading the code from the file
-    let code = match load_code(path) {
-        Ok(text) => text,
-        Err(e) => { 
-            return Err(format!("[Error reading file {:?}]: {}", path, e)); 
-        }
-    };
+    println!("");
+    println!("==================================================");
+    println!("              BENCHMARK");
+    println!("==================================================");
+    println!("");
 
-    // run_pipeline(&code)?;
-    if let Err(pipeline_error) = run_rvmpipeline(&code) {
-        // Ипользуем eprintln! (печать в поток ошибок), выводится чистый текст БЕЗ кавычек!
-        println!("{}", pipeline_error); 
-    }
-    Ok(())
+    // Классический интерпретатор
+    println!("📜 Classic Interpreter (AST):");
+    let start = Instant::now();
+    let _ = run_pipeline(program);
+    let classic_time = start.elapsed();
+    println!("   {:?}", classic_time);
+    println!("");
+
+    // VM
+    println!("⚡ Virtual Machine (Bytecode):");
+    let start = Instant::now();
+    let _ = run_rvmpipeline(program);
+    let vm_time = start.elapsed();
+    println!("   {:?}", vm_time);
+    println!("");
+
+    // Результат
+    let speedup = classic_time.as_nanos() as f64 / vm_time.as_nanos() as f64;
+    println!("==================================================");
+    println!("              RESULT");
+    println!("==================================================");
+    println!("");
+    println!("   Classic: {:?}", classic_time);
+    println!("   VM:      {:?}", vm_time);
+    println!("   VM faster {:.2}x times", speedup);
+    println!("");
 }
 

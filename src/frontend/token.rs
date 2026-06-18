@@ -1,5 +1,5 @@
 pub const VALID_OPERATORS: [char; 5] = ['*', '%', '^', '(', ')'];
-use super::vmparser::Opcode;
+use crate::frontend::vm::parser::opcodes::Opcode;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyWordType {
     Let,
@@ -34,7 +34,9 @@ pub enum OpType {
     LParen,
     RParen,
     Increment,
+    IncEqual,
     Decrement,
+    DecEqual,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,6 +151,8 @@ impl fmt::Display for OpType {
             OpType::RParen => ")",
             OpType::Increment => "++",
             OpType::Decrement => "--",
+            OpType::IncEqual => "+=",
+            OpType::DecEqual => "-=",
         };
         write!(f, "{}", s)
     }
