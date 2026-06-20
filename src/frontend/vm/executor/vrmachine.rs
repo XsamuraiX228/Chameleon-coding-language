@@ -2,13 +2,15 @@ use std::collections::HashMap;
 
 use super::loader::deserialize;
 pub struct VirtualMachine {
-    pub(crate) bytecode: Vec<u8>,
-    pub(crate) constants: Vec<u64>,
-    pub(crate) strings: Vec<String>,
-    pub(crate) stack: Vec<u64>,
-    pub(crate) globals: Vec<u64>,
-    pub(crate) string_pool: HashMap<String, usize>,
-    pub(crate) pc: usize,
+    pub(super) bytecode: Vec<u8>,
+    pub(super) constants: Vec<u64>,
+    pub(super) strings: Vec<String>,
+    pub(super) stack: Vec<u64>,
+    pub(super) globals: Vec<u64>,
+    pub(super) string_pool: HashMap<String, usize>,
+    pub(super) tos: Option<u64>,
+    pub(super) stos: Option<u64>,
+    pub(super) pc: usize,
 }
 
 impl VirtualMachine {
@@ -22,6 +24,17 @@ impl VirtualMachine {
             globals: vec![0; var_count],
             string_pool,
             pc: 0,
+            tos: Some(0),
+            stos: Some(0),
+        }
+    }
+    #[inline(always)]
+    pub(super) fn check_reg(&self) -> u8 {
+        match (self.tos, self.stos)  {
+            (Some(_), Some(_)) => 2,
+            (Some(_), None) => 1,
+            (None, None) => 0,
+            (None, Some(_)) => unreachable!("VM Error: STOS isn't empty, while TOS is empty!"),
         }
     }
 

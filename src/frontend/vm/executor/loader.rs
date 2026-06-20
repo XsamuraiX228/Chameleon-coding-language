@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-
 pub(super) fn deserialize(
     data: Vec<u8>,
 ) -> (

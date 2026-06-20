@@ -1,6 +1,5 @@
 use crate::frontend::vm::executor::vrmachine::VirtualMachine;
 
-
 impl VirtualMachine {
     #[inline(always)]
     pub(super) fn get_arg(&self) -> u16 {
@@ -10,23 +9,110 @@ impl VirtualMachine {
     }
 
     #[inline(always)]
+    pub(super) fn push_u64(&mut self, value: u64) -> Result<(), String> {
+        if self.tos.is_none() {
+            self.tos = Some(value);
+        } else if self.stos.is_none() {
+            self.stos = self.tos;
+            self.tos = Some(value);
+        } else {
+            self.stack.push(self.stos.unwrap());
+            self.stos = self.tos;
+            self.tos = Some(value);
+        }
+        Ok(())
+    }
+
+    #[inline(always)]
     pub(super) fn pop_u64(&mut self) -> Result<u64, String> {
-        self.stack
-            .pop()
-            .ok_or_else(|| "VM Error: Stack underflow".to_string())
+        let res = self.check_reg();
+        let value = match res {
+            2 => {
+                let val = self.tos.unwrap();
+                self.tos = self.stos;
+                self.stos = None;
+                val
+            }
+            1 => {
+                let val = self.tos.unwrap();
+                self.tos = self.stack.pop();
+                val
+            }
+            0 => {
+                let val = self
+                    .stack
+                    .pop()
+                    .ok_or_else(|| "Stack underflow".to_string())?;
+                val
+            }
+            _ => unreachable!(),
+        };
+        Ok(value)
     }
 
     #[inline(always)]
     pub(super) fn get_a_b_i64(&mut self) -> Result<(i64, i64), String> {
-        let b = self.pop_u64()?;
-        let a = self.pop_u64()?;
+        let res = self.check_reg();
+        let (a, b) =
+            match res {
+                2 => {
+                    let val_2 = self.tos.unwrap();
+                    let val_1 = self.stos.unwrap();
+                    (self.tos, self.stos) = (None, None);
+                    (val_1, val_2)
+                }
+                1 => {
+                    let val_2 = self.tos.unwrap();
+                    let val_1 = self.stack.pop().ok_or_else(|| {
+                        "Stack underflow in argumnet a, func get_a_b_i64".to_string()
+                    })?;
+                    self.tos = self.stack.pop();
+                    (val_1, val_2)
+                }
+                0 => {
+                    let val_2 = self.stack.pop().ok_or_else(|| {
+                        "Stack underflow in argumnet b, func get_a_b_i64".to_string()
+                    })?;
+                    let val_1 = self.stack.pop().ok_or_else(|| {
+                        "Stack underflow in argumnet a, func get_a_b_i64".to_string()
+                    })?;
+                    (val_1, val_2)
+                }
+                _ => unreachable!(),
+            };
         Ok((a as i64, b as i64))
     }
 
     #[inline(always)]
     pub(super) fn get_a_b_f64(&mut self) -> Result<(f64, f64), String> {
-        let b = self.pop_u64()?;
-        let a = self.pop_u64()?;
+        let res = self.check_reg();
+        let (a, b) =
+            match res {
+                2 => {
+                    let val_2 = self.tos.unwrap();
+                    let val_1 = self.stos.unwrap();
+                    (self.tos, self.stos) = (None, None);
+                    (val_1, val_2)
+                }
+                1 => {
+                    let val_2 = self.tos.unwrap();
+                    let val_1 = self.stack.pop().ok_or_else(|| {
+                        "Stack underflow in argumnet a, func get_a_b_f64".to_string()
+                    })?;
+                    self.tos = self.stack.pop();
+                    (val_1, val_2)
+                }
+                0 => {
+                    let val_2 = self.stack.pop().ok_or_else(|| {
+                        "Stack underflow in argumnet b, func get_a_b_f64".to_string()
+                    })?;
+                    let val_1 = self.stack.pop().ok_or_else(|| {
+                        "Stack underflow in argumnet a, func get_a_b_f64".to_string()
+                    })?;
+                    (val_1, val_2)
+                }
+                _ => unreachable!(),
+            };
         Ok((f64::from_bits(a), f64::from_bits(b)))
     }
 
