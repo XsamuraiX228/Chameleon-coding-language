@@ -25,14 +25,26 @@ impl<'a> Bparser<'a> {
         self.next_token();
         let var_name = self.get_name()?;
         let var_id = self.find_variable(var_name)?;
-        self.to_u8_with_args(Opcode::Input as u8, var_id);
+        let var_type = self.get_var_type(var_id);
+
+        match var_type {
+            DataType::Int => self.to_u8_with_args(Opcode::IInput as u8, var_id),
+            DataType::Float => self.to_u8_with_args(Opcode::FInput as u8, var_id),
+            DataType::Text => self.to_u8_with_args(Opcode::SInput as u8, var_id),
+            _ => return Err(easy_error("Bool expressions can't be an argument for Input".to_string(), self.current_line))
+        }
         Ok(())
     }
 
     pub(super) fn parse_print(&mut self) -> Result<(), ErrorHandler> {
         self.next_token();
-        self.expr_bp(0)?;
-        self.to_u8(Opcode::Print as u8);
+        let expr_type = self.expr_bp(0)?;
+        match expr_type {
+            DataType::Int => self.to_u8(Opcode::IPrint as u8),
+            DataType::Float => self.to_u8(Opcode::FPrint as u8),
+            DataType::Bool => self.to_u8(Opcode::BPrint as u8),
+            DataType::Text => self.to_u8(Opcode::SPrint as u8),
+        }
         Ok(())
     }
 

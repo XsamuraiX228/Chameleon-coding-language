@@ -1,57 +1,37 @@
-use basic_lexer::{
-    // io::scanner::{
-    // load_code,
-    // scan_code,}, 
-    run_pipeline,
-    run_rvmpipeline,
-    
-};
+use basic_lexer::io::scanner::{load_code, scan_code};
+use basic_lexer::{run_rvmpipeline, run_pure_benchmark};
+fn main() -> Result<(), String> {
+    let content_to_load = scan_code("examples")?;
 
-use std::time::Instant;
+    let path = match content_to_load.first() {
+        Some(p) => p,
+        None => { 
+            println!("No files with extension found in folder 'FILES' .bsa");
+            unreachable!()
+        }
+    };
 
+    let code = match load_code(path) {
+        Ok(code) => code,
+        Err(_) => {
+            println!("Error in scaning the text from file");
+            unreachable!()
+        }
+    };
 
-fn main() {
+    run_rvmpipeline(&code)?;
+
     let program = r#"
         LET SUM = 0
         LET I = 1
-        WHILE I <= 1000000 THEN
+        WHILE I <= 100000 THEN
             LET SUM = SUM + I
             LET I = I + 1
         WEND
         PRINT SUM
     "#;
 
-    println!("");
-    println!("==================================================");
-    println!("              BENCHMARK");
-    println!("==================================================");
-    println!("");
-
-    // Классический интерпретатор
-    println!("📜 Classic Interpreter (AST):");
-    let start = Instant::now();
-    let _ = run_pipeline(program);
-    let classic_time = start.elapsed();
-    println!("   {:?}", classic_time);
-    println!("");
-
-    // VM
-    println!("⚡ Virtual Machine (Bytecode):");
-    let start = Instant::now();
-    let _ = run_rvmpipeline(program);
-    let vm_time = start.elapsed();
-    println!("   {:?}", vm_time);
-    println!("");
-
-    // Результат
-    let speedup = classic_time.as_nanos() as f64 / vm_time.as_nanos() as f64;
-    println!("==================================================");
-    println!("              RESULT");
-    println!("==================================================");
-    println!("");
-    println!("   Classic: {:?}", classic_time);
-    println!("   VM:      {:?}", vm_time);
-    println!("   VM faster {:.2}x times", speedup);
-    println!("");
+    run_pure_benchmark(&program)?;
+    Ok(())
 }
 

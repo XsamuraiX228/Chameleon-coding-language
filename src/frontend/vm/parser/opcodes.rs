@@ -52,7 +52,14 @@ pub enum Opcode {
     Or = 0x2B,
     Not = 0x2C,
 
-    // IO
-    Print = 0x2D,
-    Input = 0x2E,
+    // Print
+    IPrint = 0x2D,
+    FPrint = 0x2E,
+    BPrint = 0x2F,
+    SPrint = 0x30,
+
+    // Input
+    IInput = 0x31,
+    FInput = 0x32,
+    SInput = 0x33,
 }

@@ -1,8 +1,287 @@
 #mode "ENGLISH"
-LET SUM = 0
+
+PRINT "=========================================="
+PRINT "    WELCOME TO THE ULTIMATE TEST PROGRAM"
+PRINT "=========================================="
+PRINT ""
+
+
+LET AGE = 25
+LET PI = 3.14159
+LET IS_ACTIVE = TRUE
+LET NAME = "John"
+
+PRINT "=== VARIABLES DECLARATION ==="
+PRINT "AGE (Int):"
+PRINT AGE
+PRINT "PI (Float):"
+PRINT PI
+PRINT "IS_ACTIVE (Bool):"
+PRINT IS_ACTIVE
+PRINT "NAME (Text):"
+PRINT NAME
+PRINT ""
+
+
+PRINT "=== ARITHMETIC OPERATIONS ==="
+
+LET X = 10
+LET Y = 3
+
+PRINT "X ="
+PRINT X
+PRINT "Y ="
+PRINT Y
+
+PRINT "X + Y ="
+PRINT X + Y
+PRINT "X - Y ="
+PRINT X - Y
+PRINT "X * Y ="
+PRINT X * Y
+PRINT "X / Y ="
+PRINT X / Y
+PRINT "X % Y ="
+PRINT X % Y
+PRINT "X ^ Y ="
+PRINT X ^ Y
+PRINT ""
+
+PRINT "Float arithmetic:"
+LET F1 = 5.5
+LET F2 = 2.0
+PRINT F1
+PRINT " + "
+PRINT F2
+PRINT " = "
+PRINT F1 + F2
+PRINT F1
+PRINT " - "
+PRINT F2
+PRINT " = "
+PRINT F1 - F2
+PRINT F1
+PRINT " * "
+PRINT F2
+PRINT " = "
+PRINT F1 * F2
+PRINT F1
+PRINT " / "
+PRINT F2
+PRINT " = "
+PRINT F1 / F2
+PRINT ""
+
+
+PRINT "=== INCREMENT / DECREMENT OPERATIONS ==="
+
+LET COUNTER = 0
+PRINT "Counter initially:"
+PRINT COUNTER
+
+COUNTER++
+PRINT "After COUNTER++:"
+PRINT COUNTER
+
+COUNTER--
+PRINT "After COUNTER--:"
+PRINT COUNTER
+
+COUNTER += 5
+PRINT "After COUNTER += 5:"
+PRINT COUNTER
+
+COUNTER -= 2
+PRINT "After COUNTER -= 2:"
+PRINT COUNTER
+PRINT ""
+
+
+PRINT "=== LOGICAL OPERATIONS ==="
+
+LET A = TRUE
+LET B = FALSE
+
+PRINT "A ="
+PRINT A
+PRINT "B ="
+PRINT B
+PRINT "A AND B ="
+PRINT A AND B
+PRINT "A OR B  ="
+PRINT A OR B
+PRINT "NOT A   ="
+PRINT NOT A
+PRINT ""
+
+PRINT "Comparisons:"
+PRINT "5 < 10  ="
+PRINT 5 < 10
+PRINT "5 > 10  ="
+PRINT 5 > 10
+PRINT "5 == 5  ="
+PRINT 5 == 5
+PRINT "5 != 10 ="
+PRINT 5 != 10
+PRINT ""
+
+
+PRINT "=== IF-ELSE STATEMENTS ==="
+
+LET SCORE = 85
+
+IF SCORE >= 90 THEN
+    PRINT "GRADE: A - Excellent!"
+ELSE
+    IF SCORE >= 80 THEN
+        PRINT "GRADE: B - Good job!"
+    ELSE
+        IF SCORE >= 70 THEN
+            PRINT "GRADE: C - Not bad!"
+        ELSE
+            PRINT "GRADE: F - Need improvement!"
+        END
+    END
+END
+
+PRINT ""
+
+IF IS_ACTIVE THEN
+    PRINT "User is active"
+END
+PRINT ""
+
+
+PRINT "=== WHILE LOOP ==="
+
 LET I = 1
-WHILE I <= 10000000 THEN
+LET SUM = 0
+
+WHILE I <= 10 THEN
     LET SUM = SUM + I
     LET I = I + 1
 WEND
+
+PRINT "Sum of 1..10 ="
 PRINT SUM
+PRINT ""
+
+
+PRINT "=== FOR LOOP ==="
+
+LET FACT = 1
+
+FOR J = 1 TO 5 STEP 1
+    LET FACT = FACT * J
+NEXT
+
+PRINT "5! ="
+PRINT FACT
+PRINT ""
+
+PRINT "Countdown:"
+FOR K = 5 TO 1 STEP -1
+    PRINT K
+NEXT
+PRINT "Liftoff!"
+PRINT ""
+
+
+PRINT "=== NESTED LOOPS (Multiplication Table) ==="
+
+LET ROW = 1
+
+WHILE ROW <= 5 THEN
+    LET COL = 1
+    WHILE COL <= 5 THEN
+        PRINT ROW * COL
+        PRINT " "
+        LET COL = COL + 1
+    WEND
+    PRINT ""
+    LET ROW = ROW + 1
+WEND
+PRINT ""
+
+
+PRINT "=== STRING OPERATIONS ==="
+
+LET FIRST = "Hello"
+LET LAST = "World"
+
+PRINT FIRST
+PRINT " "
+PRINT LAST
+PRINT "!"
+
+PRINT ""
+
+
+PRINT "=== USER INPUT ==="
+PRINT "Enter your favorite number:"
+LET FAV_NUMBER = 0
+INPUT FAV_NUMBER
+
+IF FAV_NUMBER % 2 == 0 THEN
+    PRINT "Your number is even!"
+ELSE
+    PRINT "Your number is odd!"
+END
+PRINT ""
+
+
+PRINT "=== COMPLEX EXPRESSIONS ==="
+
+LET A = 10
+LET B = 5
+LET C = 3
+
+LET RESULT1 = (A + B) * C
+LET RESULT2 = (A - B) ^ 2 + 5
+LET RESULT3 = A * B / C + (A - B)
+
+PRINT "(10 + 5) * 3 ="
+PRINT RESULT1
+PRINT "(10 - 5)^2 + 5 ="
+PRINT RESULT2
+PRINT "10 * 5 / 3 + (10 - 5) ="
+PRINT RESULT3
+PRINT ""
+
+
+PRINT "=== BOOLEAN EXPRESSIONS ==="
+
+LET TEMP = 25
+LET IS_HOT = TEMP > 20
+LET IS_WARM = TEMP >= 20 AND TEMP <= 25
+
+PRINT "Temperature:"
+PRINT TEMP
+PRINT "Is HOT?   "
+PRINT IS_HOT
+PRINT "Is WARM?  "
+PRINT IS_WARM
+PRINT ""
+
+
+PRINT "=========================================="
+PRINT "        ALL TESTS COMPLETED!"
+PRINT "=========================================="
+PRINT "Final values:"
+PRINT "AGE ="
+PRINT AGE
+PRINT "PI  ="
+PRINT PI
+PRINT "NAME ="
+PRINT NAME
+PRINT "SUM ="
+PRINT SUM
+PRINT "FACT ="
+PRINT FACT
+PRINT "FAV_NUMBER ="
+PRINT FAV_NUMBER
+PRINT ""
+
+PRINT "=========================================="
+PRINT "        PROGRAM COMPLETED SUCCESSFULLY!"
+PRINT "=========================================="
