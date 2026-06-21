@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::frontend::token::KeyWordType;
+use crate::frontend::token::{KeyWordType, FuncKeyWord};
 
 
 pub enum Dict {
@@ -10,14 +10,15 @@ pub enum Dict {
 }
 
 pub struct SyntaxDict {
-    pub keywords: HashMap<String, KeyWordType>
+    pub keywords: HashMap<String, KeyWordType>,
+    pub func_keywords: HashMap<String, FuncKeyWord>,
 }
 
 #[allow(dead_code)]
 impl SyntaxDict {
     fn default_english() -> Self {
         let mut keywords = HashMap::new();
-        
+        let mut func_keywords = HashMap::new();
         // Variables & Operations
         keywords.insert("LET".to_string(), KeyWordType::Let);
         keywords.insert("PRINT".to_string(), KeyWordType::Print);
@@ -38,21 +39,29 @@ impl SyntaxDict {
         
         // Jumps & Utilities
         keywords.insert("GOTO".to_string(), KeyWordType::Goto);
-        keywords.insert("RANDOM".to_string(), KeyWordType::Random);
         keywords.insert("END".to_string(), KeyWordType::End);
 
         // Bool operators
         keywords.insert("AND".to_string(), KeyWordType::And);
         keywords.insert("OR".to_string(), KeyWordType::Or);
         keywords.insert("NOT".to_string(), KeyWordType::Not);
-        
-        Self { keywords }
+
+        // Math Functions
+        func_keywords.insert("SIN".to_string(), FuncKeyWord::Sin);
+        func_keywords.insert("COS".to_string(), FuncKeyWord::Cos);
+        func_keywords.insert("ABS".to_string(), FuncKeyWord::Abs);
+        func_keywords.insert("SQRT".to_string(), FuncKeyWord::Sqrt);
+        func_keywords.insert("RANDOM".to_string(), FuncKeyWord::Random);
+        func_keywords.insert("MIN".to_string(), FuncKeyWord::Min);
+        func_keywords.insert("MAX".to_string(), FuncKeyWord::Max);
+
+        Self { keywords, func_keywords }
     }
 
     // ==================== RUSSIAN (Русский) ====================
     fn russian_style() -> Self {
         let mut keywords = HashMap::new();
-        
+        let mut func_keywords = HashMap::new();
         // Variables & Operations
         keywords.insert("ПУСТЬ".to_string(), KeyWordType::Let);
         keywords.insert("ПЕЧАТЬ".to_string(), KeyWordType::Print);
@@ -73,15 +82,23 @@ impl SyntaxDict {
         
         // Jumps & Utilities
         keywords.insert("ИДИ".to_string(), KeyWordType::Goto);
-        keywords.insert("РАНДОМ".to_string(), KeyWordType::Random);
         keywords.insert("СТОП".to_string(), KeyWordType::End);
+
+        // Math Functions
+        func_keywords.insert("SIN".to_string(), FuncKeyWord::Sin);
+        func_keywords.insert("COS".to_string(), FuncKeyWord::Cos);
+        func_keywords.insert("ABS".to_string(), FuncKeyWord::Abs);
+        func_keywords.insert("SQRT".to_string(), FuncKeyWord::Sqrt);
+        func_keywords.insert("RANDOM".to_string(), FuncKeyWord::Random);
+        func_keywords.insert("MIN".to_string(), FuncKeyWord::Min);
+        func_keywords.insert("MAX".to_string(), FuncKeyWord::Max);
         
-        Self { keywords }
+        Self { keywords, func_keywords }
     }
     // ==================== JAPANESE (日本語) ====================
     fn japanese_style() -> Self {
         let mut keywords = HashMap::new();
-        
+        let mut func_keywords = HashMap::new();
         // Variables & Operations
         keywords.insert("代入".to_string(), KeyWordType::Let);      // dainyuu - assign
         keywords.insert("表示".to_string(), KeyWordType::Print);    // hyouji - display
@@ -101,11 +118,19 @@ impl SyntaxDict {
         keywords.insert("次".to_string(), KeyWordType::Next);        // tsugi - next
         
         // Jumps & Utilities
-        keywords.insert("行け".to_string(), KeyWordType::Goto);      // ike - go
-        keywords.insert("乱数".to_string(), KeyWordType::Random);    // ransuu - random
-        keywords.insert("終了".to_string(), KeyWordType::End);       // shuuryou - end/quit
+        keywords.insert("行け".to_string(), KeyWordType::Goto);      // ike - go  // ransuu - random
+        keywords.insert("終了".to_string(), KeyWordType::End);    
+           // shuuryou - end/quit
+        // Math Functions
+        func_keywords.insert("SIN".to_string(), FuncKeyWord::Sin);
+        func_keywords.insert("COS".to_string(), FuncKeyWord::Cos);
+        func_keywords.insert("ABS".to_string(), FuncKeyWord::Abs);
+        func_keywords.insert("SQRT".to_string(), FuncKeyWord::Sqrt);
+        func_keywords.insert("RANDOM".to_string(), FuncKeyWord::Random);
+        func_keywords.insert("MIN".to_string(), FuncKeyWord::Min);
+        func_keywords.insert("MAX".to_string(), FuncKeyWord::Max);
         
-        Self { keywords }
+        Self { keywords, func_keywords }
     }
 
     pub fn get_dict(name_of_dict: &str) -> SyntaxDict {

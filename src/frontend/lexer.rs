@@ -1,7 +1,7 @@
-use crate::frontend::token::VALID_OPERATORS;
-use crate::frontend::token::{CmpOp, OpType, Token};
 use crate::dialect::SyntaxDict;
 use crate::frontend::token::Literal;
+use crate::frontend::token::VALID_OPERATORS;
+use crate::frontend::token::{CmpOp, OpType, Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpannedToken<'a> {
@@ -134,6 +134,13 @@ impl<'a> Lexer<'a> {
                 self.pos += 1;
                 Some(SpannedToken {
                     token: Token::Semicolon,
+                    line: token_line,
+                })
+            }
+            ',' => {
+                self.pos += 1;
+                Some(SpannedToken {
+                    token: Token::Comma,
                     line: token_line,
                 })
             }
@@ -350,6 +357,7 @@ impl<'a> Lexer<'a> {
                     || current_char == ':'
                     || current_char == '+'
                     || current_char == '-'
+                    || current_char == ','
                     || VALID_OPERATORS.contains(&current_char)
                 {
                     break;
@@ -369,11 +377,14 @@ impl<'a> Lexer<'a> {
                 // println!("{}", word_str);
                 // println!("{:?}", self.config.keywords.get(word_str));
                 let key_token = if let Some(kw_type) = self.config.keywords.get(word_str) {
-                    Token::KeyWord(kw_type.clone())
+                    Token::KeyWord(*kw_type)
+                } else if let Some(fw_token) = self.config.func_keywords.get(word_str) {
+                    Token::FuncWord(*fw_token)
                 } else {
                     let type_token = match word_str {
                         "TRUE" => Token::Literal(Literal::Bool(true)),
                         "FALSE" => Token::Literal(Literal::Bool(false)),
+                        "," => Token::Comma,
                         _ => Token::Literal(Literal::Ident(word_str)),
                     };
                     return Some(SpannedToken {

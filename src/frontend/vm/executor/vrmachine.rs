@@ -65,6 +65,11 @@ impl VirtualMachine {
                 // IO opcodes
                 0x2D..=0x33 => self.execute_io(opcode)?,
 
+                0x40 => {
+                    let func_id = self.bytecode[self.pc + 1];
+                    self.execute_buildin(func_id)?;
+                },
+
                 _ => {
                     return Err(format!(
                         "Unknown opcode: 0x{:02X} at PC: {}",

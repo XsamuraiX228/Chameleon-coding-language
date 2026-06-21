@@ -143,6 +143,9 @@ impl<'a> Bparser<'a> {
                     ));
                 }
             },
+            Some(Token::FuncWord(fw)) => {
+                self.parse_func(fw)?
+            }
             _ => {
                 return Err(easy_error(
                     "Expected number or variable".to_string(),

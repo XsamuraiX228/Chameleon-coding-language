@@ -1,6 +1,17 @@
 pub const VALID_OPERATORS: [char; 5] = ['*', '%', '^', '(', ')'];
 use crate::frontend::vm::parser::opcodes::Opcode;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FuncKeyWord {
+    Sin,
+    Cos,
+    Abs,
+    Sqrt,
+    Random,
+    Min,
+    Max,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyWordType {
     Let,
     Print,
@@ -9,7 +20,6 @@ pub enum KeyWordType {
     Then,
     Else,
     Goto,
-    Random,
     While,
     Wend,
     For,
@@ -124,11 +134,13 @@ pub enum Literal<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token<'a> {   
     KeyWord(KeyWordType),
+    FuncWord(FuncKeyWord),
     OpType(OpType),
     CmpOp(CmpOp),
     Literal(Literal<'a>),
     Mark(&'a str), // e.g :loop 
     Semicolon,
+    Comma,
     Newline, // \n
     EOF,
     Unexpected(char),
@@ -193,7 +205,6 @@ impl fmt::Display for KeyWordType {
             KeyWordType::Then => "THEN",
             KeyWordType::Else => "ELSE",
             KeyWordType::Goto => "GOTO",
-            KeyWordType::Random => "RANDOM",
             KeyWordType::While => "WHILE",
             KeyWordType::Wend => "WEND",
             KeyWordType::For => "FOR",
@@ -208,16 +219,35 @@ impl fmt::Display for KeyWordType {
         write!(f, "{}", s)
     }
 }
+
+impl fmt::Display for FuncKeyWord {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            FuncKeyWord::Sin => "SIN",
+            FuncKeyWord::Cos => "COS",
+            FuncKeyWord::Abs => "ABS",
+            FuncKeyWord::Max => "MAX",
+            FuncKeyWord::Min => "MIN",
+            FuncKeyWord::Random => "RANDOM",
+            FuncKeyWord::Sqrt => "SQRT",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+
 impl<'a> fmt::Display for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Token::KeyWord(kw) => write!(f, "KW({})", kw),
+            Token::FuncWord(fw) => write!(f, "FW({}", fw),
             Token::OpType(op) => write!(f, "Op({})", op),
             Token::CmpOp(cmp) => write!(f, "Cmp({})", cmp),
             Token::Literal(lit) => write!(f, "{}", lit),
             Token::Mark(name) => write!(f, "Mark(:{})", name),
             Token::Newline => write!(f, "Newline"),
             Token::Semicolon => write!(f, "Semicolon"),
+            Token::Comma => write!(f, "Comma"),
             Token::EOF => write!(f, "EOF"),
             Token::Unexpected(ch) => write!(f, "Token(:{})", ch)
         }

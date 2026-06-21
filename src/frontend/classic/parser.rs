@@ -111,7 +111,6 @@ impl<'a> Parser<'a> {
             Token::KeyWord(KeyWordType::Let) => self.parse_let(),
             Token::KeyWord(KeyWordType::Print) => self.parse_print(),
             Token::KeyWord(KeyWordType::If) => self.parse_if(),
-            Token::KeyWord(KeyWordType::Random) => self.parse_random(),
             Token::Mark(name) => Ok(Statement::Label { name }),
             Token::KeyWord(KeyWordType::End) => Ok(Statement::End),
             Token::KeyWord(KeyWordType::Input) => {
@@ -333,18 +332,6 @@ impl<'a> Parser<'a> {
             block, 
             step, })
     }
-
-    fn parse_random(&mut self) -> Result<Statement<'a>, ErrorHandler> {
-        // get name of varibale
-        let name = self.get_name()?;
-        
-        // get min and max to set a borders
-        let min = self.get_num()?;
-        let max = self.get_num()?;
-
-        Ok (Statement::Random { name, min, max })
-    }
-
 
     // Expr_bp used for calculating math expressions in code
     // e.g LET X = 5 + (9 * 6)^2

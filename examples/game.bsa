@@ -1,13 +1,5 @@
-LET I = 0
-LET A = 0
-LET B = 1
-LET T = 0
-
-WHILE I < 10000000 THEN
-    LET T = A + B
-    LET A = B
-    LET B = T
-    LET I = I + 1
-WEND
-
-PRINT B
+LET SUM = 0
+FOR I = 0 TO 10000000
+    LET SUM = SUM + I
+NEXT
+PRINT SUM

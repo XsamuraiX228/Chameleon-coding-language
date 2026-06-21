@@ -62,4 +62,7 @@ pub enum Opcode {
     IInput = 0x31,
     FInput = 0x32,
     SInput = 0x33,
+
+    // CallNative - specila opcode to call buildin function
+    CallNative = 0x40
 }

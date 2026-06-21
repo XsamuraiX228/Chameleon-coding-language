@@ -1,7 +1,7 @@
 use crate::{
     dialect::SyntaxDict,
-    frontend::vm::{parser::bparser::Bparser, executor::vrmachine::VirtualMachine},
-    frontend::{lexer::Lexer, classic::parser::Parser},
+    frontend::vm::{executor::vrmachine::VirtualMachine, parser::bparser::Bparser},
+    frontend::{classic::parser::Parser, lexer::Lexer},
     runtime::interpreter::Interpreter,
 };
 pub mod diagnostic;
@@ -11,16 +11,12 @@ pub mod io;
 pub mod runtime;
 use std::fs;
 
-// Добавь этот импорт в самый верх lib.rs, если его там нет:
-use std::time::Instant;
 
-// ============================================
-// ЧЕСТНЫЙ БЕНЧМАРК РАНТАЙМА
-// ============================================
+use std::time::Instant;
 
 pub fn run_pure_benchmark(raw_code: &str) -> Result<(), String> {
     let config = SyntaxDict::get_dict("ENGLISH");
-    
+
     println!("\n==================================================");
     println!("      ⚙️  ПРИГОТОВЛЕНИЕ ТЕСТОВОЙ СРЕДЫ... ");
     println!("==================================================");
@@ -29,8 +25,10 @@ pub fn run_pure_benchmark(raw_code: &str) -> Result<(), String> {
     let mut lexer_classic = Lexer::new(raw_code, &config, 1);
     let tokens_classic = lexer_classic.tokenize();
     let mut parser_classic = Parser::new(tokens_classic, &config);
-    let ast = parser_classic.parse().map_err(|e| format!("Ошибка парсинга AST: {}", e))?;
-    
+    let ast = parser_classic
+        .parse()
+        .map_err(|e| format!("Ошибка парсинга AST: {}", e))?;
+
     // Сканируем метки один раз снаружи
     let mut temp_interpreter = Interpreter::new();
     let marks = temp_interpreter.pre_scan_labels(&ast);
@@ -39,7 +37,9 @@ pub fn run_pure_benchmark(raw_code: &str) -> Result<(), String> {
     let mut lexer_vm = Lexer::new(raw_code, &config, 1);
     let tokens_vm = lexer_vm.tokenize();
     let mut parser_vm = Bparser::new(tokens_vm, &config);
-    let raw_bytecode = parser_vm.start_byteparsing().map_err(|e| format!("Ошибка компиляции ВМ: {}", e))?;
+    let raw_bytecode = parser_vm
+        .start_byteparsing()
+        .map_err(|e| format!("Ошибка компиляции ВМ: {}", e))?;
 
     println!("✅ Все структуры данных готовы к бою. Начинаем замеры (10 прогонов).");
     println!("==================================================");
@@ -55,18 +55,17 @@ pub fn run_pure_benchmark(raw_code: &str) -> Result<(), String> {
     for i in 1..=10 {
         // Создаем чистый интерпретатор для каждого раунда
         let mut interpreter = Interpreter::new();
-        
+
         let start_classic = Instant::now();
         let ast_res = std::hint::black_box(interpreter.execute(&ast, &marks));
         let elapsed = start_classic.elapsed();
-        
+
         ast_res?; // Проверяем на ошибки
         total_classic_time += elapsed;
         println!("   Round {:2}: {:?}", i, elapsed);
     }
     let avg_classic = total_classic_time / 10;
     println!("   ➔ СРЕДНЕЕ ВРЕМЯ AST: {:?}\n", avg_classic);
-
 
     // ----------------------------------------------------
     // ЗАМЕР: Виртуальная Машина (10 прогонов)
@@ -78,18 +77,17 @@ pub fn run_pure_benchmark(raw_code: &str) -> Result<(), String> {
         // Создаем чистую ВМ (сброшенный стек, pc=0, чистые глобалы)
         // Десериализация происходит ДО замера времени!
         let mut vm = VirtualMachine::new(raw_bytecode.clone());
-        
+
         let start_vm = Instant::now();
         let vm_res = std::hint::black_box(vm.run_bytecode());
         let elapsed = start_vm.elapsed();
-        
+
         vm_res?; // Проверяем на ошибки
         total_vm_time += elapsed;
         println!("   Round {:2}: {:?}", i, elapsed);
     }
     let avg_vm = total_vm_time / 10;
     println!("   ➔ СРЕДНЕЕ ВРЕМЯ VM:  {:?}\n", avg_vm);
-
 
     // ----------------------------------------------------
     // СТАБИЛЬНЫЕ РЕЗУЛЬТАТЫ СРАВНЕНИЯ
@@ -103,12 +101,14 @@ pub fn run_pure_benchmark(raw_code: &str) -> Result<(), String> {
     println!("==================================================\n");
     println!("   Классический AST (Среднее): {:?}", avg_classic);
     println!("   Новая ВМ (u64)    (Среднее): {:?}", avg_vm);
-    println!("   🚀 Виртуальная машина стабильно быстрее в {:.2}x раз!", speedup);
+    println!(
+        "   🚀 Виртуальная машина стабильно быстрее в {:.2}x раз!",
+        speedup
+    );
     println!("\n==================================================");
 
     Ok(())
 }
-
 
 /// Run the code (Preprocessor -> Lexer -> Parser -> Interprenter)
 pub fn run_pipeline(raw_code: &str) -> Result<(), String> {
@@ -194,6 +194,7 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
     let tokens = lexer.tokenize();
     // Creating parser
     let mut parser = Bparser::new(tokens, &config);
+
     let raw_bytecode = parser.start_byteparsing().map_err(|e| format!("{}", e))?;
     parser.debug_dump();
     fs::write("program.bin", &raw_bytecode).expect("Failed to write bytecode");
@@ -203,8 +204,3 @@ pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
 
     Ok(())
 }
-
-// ============================================
-// ПРОСТОЙ БЕНЧМАРК
-// ============================================
-
