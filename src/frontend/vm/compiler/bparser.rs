@@ -5,7 +5,7 @@ use crate::diagnostic::diagnostic::{ErrorHandler, easy_error, hard_error};
 use crate::dialect::SyntaxDict;
 use crate::frontend::lexer::SpannedToken;
 use crate::frontend::token::{KeyWordType, Literal, OpType, Token};
-use crate::frontend::vm::parser::opcodes::Opcode::{FAdd, FSub, IAdd, ISub};
+use crate::frontend::vm::compiler::opcodes::Opcode::{FAdd, FSub, IAdd, ISub};
 
 use super::opcodes::Opcode;
 use super::types::{Constants, VarInfo};

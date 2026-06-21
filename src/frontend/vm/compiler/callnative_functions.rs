@@ -4,7 +4,7 @@ use crate::{
     diagnostic::diagnostic::{ErrorHandler, easy_error},
     frontend::{
         token::{FuncKeyWord, OpType, Token},
-        vm::parser::{opcodes::Opcode, types::DataType},
+        vm::compiler::{opcodes::Opcode, types::DataType},
     },
 };
 

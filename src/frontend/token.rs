@@ -1,5 +1,5 @@
 pub const VALID_OPERATORS: [char; 5] = ['*', '%', '^', '(', ')'];
-use crate::frontend::vm::parser::opcodes::Opcode;
+use crate::frontend::vm::compiler::opcodes::Opcode;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FuncKeyWord {
     Sin,

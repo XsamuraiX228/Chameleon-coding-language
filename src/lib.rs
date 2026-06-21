@@ -1,6 +1,6 @@
 use crate::{
     dialect::SyntaxDict,
-    frontend::vm::{executor::vrmachine::VirtualMachine, parser::bparser::Bparser},
+    frontend::vm::{executor::vrmachine::VirtualMachine, compiler::bparser::Bparser},
     frontend::{classic::parser::Parser, lexer::Lexer},
     runtime::interpreter::Interpreter,
 };

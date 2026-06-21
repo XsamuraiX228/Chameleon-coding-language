@@ -20,16 +20,6 @@ fn main() -> Result<(), String> {
     };
 
     run_rvmpipeline(&code)?;
-
-    let program = r#"
-        LET I = 0
-        LET SUM = 0
-        WHILE I <= 10000000 THEN
-            LET SUM = SUM + I
-            LET I = I + 1
-        WEND
-    "#;
-    run_pure_benchmark(program)?;
     Ok(())
 }
 
