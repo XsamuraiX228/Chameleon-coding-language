@@ -1,6 +1,7 @@
+use crate::frontend::{
+    token::{FuncKeyWord, KeyWordType, VarType},
+};
 use std::collections::HashMap;
-use crate::frontend::token::{KeyWordType, FuncKeyWord};
-
 
 pub enum Dict {
     Russian,
@@ -12,6 +13,7 @@ pub enum Dict {
 pub struct SyntaxDict {
     pub keywords: HashMap<String, KeyWordType>,
     pub func_keywords: HashMap<String, FuncKeyWord>,
+    pub type_keywords: HashMap<String, VarType>,
 }
 
 #[allow(dead_code)]
@@ -19,16 +21,25 @@ impl SyntaxDict {
     fn default_english() -> Self {
         let mut keywords = HashMap::new();
         let mut func_keywords = HashMap::new();
+        let mut type_keywords = HashMap::new();
+
+        // Types
+        type_keywords.insert("Int".to_string(), VarType::Int);
+        type_keywords.insert("Float".to_string(), VarType::Float);
+        type_keywords.insert("Bool".to_string(), VarType::Bool);
+        type_keywords.insert("String".to_string(), VarType::String);
+
         // Variables & Operations
         keywords.insert("LET".to_string(), KeyWordType::Let);
         keywords.insert("PRINT".to_string(), KeyWordType::Print);
+        keywords.insert("PRINTLN".to_string(), KeyWordType::Println);
         keywords.insert("INPUT".to_string(), KeyWordType::Input);
-        
+
         // Conditionals
         keywords.insert("IF".to_string(), KeyWordType::If);
         keywords.insert("THEN".to_string(), KeyWordType::Then);
         keywords.insert("ELSE".to_string(), KeyWordType::Else);
-        
+
         // Loops
         keywords.insert("WHILE".to_string(), KeyWordType::While);
         keywords.insert("WEND".to_string(), KeyWordType::Wend);
@@ -36,7 +47,7 @@ impl SyntaxDict {
         keywords.insert("TO".to_string(), KeyWordType::To);
         keywords.insert("STEP".to_string(), KeyWordType::Step);
         keywords.insert("NEXT".to_string(), KeyWordType::Next);
-        
+
         // Jumps & Utilities
         keywords.insert("GOTO".to_string(), KeyWordType::Goto);
         keywords.insert("END".to_string(), KeyWordType::End);
@@ -55,23 +66,40 @@ impl SyntaxDict {
         func_keywords.insert("MIN".to_string(), FuncKeyWord::Min);
         func_keywords.insert("MAX".to_string(), FuncKeyWord::Max);
 
-        Self { keywords, func_keywords }
+        // UserFunctions defenitions
+        keywords.insert("FN".to_string(), KeyWordType::Func);
+        keywords.insert("RETURN".to_string(), KeyWordType::Return);
+
+        Self {
+            keywords,
+            func_keywords,
+            type_keywords
+        }
     }
 
     // ==================== RUSSIAN (Русский) ====================
     fn russian_style() -> Self {
         let mut keywords = HashMap::new();
         let mut func_keywords = HashMap::new();
+
+        let mut type_keywords = HashMap::new();
+
+        // Types
+        type_keywords.insert("INT".to_string(), VarType::Int);
+        type_keywords.insert("FLOAT".to_string(), VarType::Float);
+        type_keywords.insert("BOOL".to_string(), VarType::Bool);
+        type_keywords.insert("STRING".to_string(), VarType::String);
+
         // Variables & Operations
         keywords.insert("ПУСТЬ".to_string(), KeyWordType::Let);
         keywords.insert("ПЕЧАТЬ".to_string(), KeyWordType::Print);
         keywords.insert("ВВОД".to_string(), KeyWordType::Input);
-        
+
         // Conditionals
         keywords.insert("ЕСЛИ".to_string(), KeyWordType::If);
         keywords.insert("ТО".to_string(), KeyWordType::Then);
         keywords.insert("ИНАЧЕ".to_string(), KeyWordType::Else);
-        
+
         // Loops
         keywords.insert("ПОКА".to_string(), KeyWordType::While);
         keywords.insert("КОНЕЦ_ПОКА".to_string(), KeyWordType::Wend);
@@ -79,7 +107,7 @@ impl SyntaxDict {
         keywords.insert("ДО".to_string(), KeyWordType::To);
         keywords.insert("ШАГ".to_string(), KeyWordType::Step);
         keywords.insert("СЛЕДУЮЩИЙ".to_string(), KeyWordType::Next);
-        
+
         // Jumps & Utilities
         keywords.insert("ИДИ".to_string(), KeyWordType::Goto);
         keywords.insert("СТОП".to_string(), KeyWordType::End);
@@ -92,35 +120,47 @@ impl SyntaxDict {
         func_keywords.insert("RANDOM".to_string(), FuncKeyWord::Random);
         func_keywords.insert("MIN".to_string(), FuncKeyWord::Min);
         func_keywords.insert("MAX".to_string(), FuncKeyWord::Max);
-        
-        Self { keywords, func_keywords }
+
+        Self {
+            keywords,
+            func_keywords,
+            type_keywords
+        }
     }
     // ==================== JAPANESE (日本語) ====================
     fn japanese_style() -> Self {
         let mut keywords = HashMap::new();
         let mut func_keywords = HashMap::new();
+        let mut type_keywords = HashMap::new();
+
+        // Types
+        type_keywords.insert("INT".to_string(), VarType::Int);
+        type_keywords.insert("FLOAT".to_string(), VarType::Float);
+        type_keywords.insert("BOOL".to_string(), VarType::Bool);
+        type_keywords.insert("STRING".to_string(), VarType::String);
+
         // Variables & Operations
-        keywords.insert("代入".to_string(), KeyWordType::Let);      // dainyuu - assign
-        keywords.insert("表示".to_string(), KeyWordType::Print);    // hyouji - display
-        keywords.insert("入力".to_string(), KeyWordType::Input);    // nyuuryoku - input
-        
+        keywords.insert("代入".to_string(), KeyWordType::Let); // dainyuu - assign
+        keywords.insert("表示".to_string(), KeyWordType::Print); // hyouji - display
+        keywords.insert("入力".to_string(), KeyWordType::Input); // nyuuryoku - input
+
         // Conditionals
-        keywords.insert("もし".to_string(), KeyWordType::If);        // moshi - if
-        keywords.insert("ならば".to_string(), KeyWordType::Then);    // naraba - then
-        keywords.insert("違う".to_string(), KeyWordType::Else);      // chigau - else/different
-        
+        keywords.insert("もし".to_string(), KeyWordType::If); // moshi - if
+        keywords.insert("ならば".to_string(), KeyWordType::Then); // naraba - then
+        keywords.insert("違う".to_string(), KeyWordType::Else); // chigau - else/different
+
         // Loops
-        keywords.insert("間".to_string(), KeyWordType::While);       // aida - while/during
-        keywords.insert("繰り返す".to_string(), KeyWordType::Wend);  // kurikaesu - repeat
-        keywords.insert("為".to_string(), KeyWordType::For);        // tame - for
-        keywords.insert("まで".to_string(), KeyWordType::To);        // made - until/to
-        keywords.insert("歩数".to_string(), KeyWordType::Step);      // hosuu - step
-        keywords.insert("次".to_string(), KeyWordType::Next);        // tsugi - next
-        
+        keywords.insert("間".to_string(), KeyWordType::While); // aida - while/during
+        keywords.insert("繰り返す".to_string(), KeyWordType::Wend); // kurikaesu - repeat
+        keywords.insert("為".to_string(), KeyWordType::For); // tame - for
+        keywords.insert("まで".to_string(), KeyWordType::To); // made - until/to
+        keywords.insert("歩数".to_string(), KeyWordType::Step); // hosuu - step
+        keywords.insert("次".to_string(), KeyWordType::Next); // tsugi - next
+
         // Jumps & Utilities
-        keywords.insert("行け".to_string(), KeyWordType::Goto);      // ike - go  // ransuu - random
-        keywords.insert("終了".to_string(), KeyWordType::End);    
-           // shuuryou - end/quit
+        keywords.insert("行け".to_string(), KeyWordType::Goto); // ike - go  // ransuu - random
+        keywords.insert("終了".to_string(), KeyWordType::End);
+        // shuuryou - end/quit
         // Math Functions
         func_keywords.insert("SIN".to_string(), FuncKeyWord::Sin);
         func_keywords.insert("COS".to_string(), FuncKeyWord::Cos);
@@ -129,8 +169,12 @@ impl SyntaxDict {
         func_keywords.insert("RANDOM".to_string(), FuncKeyWord::Random);
         func_keywords.insert("MIN".to_string(), FuncKeyWord::Min);
         func_keywords.insert("MAX".to_string(), FuncKeyWord::Max);
-        
-        Self { keywords, func_keywords }
+
+        Self {
+            keywords,
+            func_keywords,
+            type_keywords
+        }
     }
 
     pub fn get_dict(name_of_dict: &str) -> SyntaxDict {
@@ -148,5 +192,5 @@ impl SyntaxDict {
             }
         }
         format!("{:?}", name_of_kw)
-    } 
+    }
 }

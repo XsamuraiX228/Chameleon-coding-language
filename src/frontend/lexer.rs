@@ -1,4 +1,5 @@
 use crate::dialect::SyntaxDict;
+use crate::frontend::token::FuncOp;
 use crate::frontend::token::Literal;
 use crate::frontend::token::VALID_OPERATORS;
 use crate::frontend::token::{CmpOp, OpType, Token};
@@ -12,17 +13,42 @@ pub struct SpannedToken<'a> {
 pub struct Lexer<'a> {
     input: &'a str,
     pos: usize,
-    config: &'a SyntaxDict,
+    config: SyntaxDict,
     current_line: usize,
 }
 
+pub fn get_dialect<'a>(input: &'a str) -> (SyntaxDict, &'a str, usize) {
+    let mut config = SyntaxDict::get_dict("ENGLISH");
+
+    let mut current_line = 0;
+    let mut code = input;
+
+    if let Some(first_line) = input.lines().next() {
+        let trimmed = first_line.trim();
+        if trimmed.starts_with("#mode") {
+            current_line += 1;
+            if let (Some(start_quote), Some(end_quote)) = (trimmed.find('"'), trimmed.rfind('"')) {
+                if start_quote != end_quote {
+                    let dict_name = &trimmed.trim()[start_quote + 1..end_quote];
+                    config = SyntaxDict::get_dict(dict_name);
+                }
+            }
+            if let Some(pos) = input.find('\n') {
+                code = &input[pos + 1..];
+            }
+        }
+    }
+    (config, code, current_line)
+}
+
 impl<'a> Lexer<'a> {
-    pub fn new(input: &'a str, config: &'a SyntaxDict, number: usize) -> Self {
+    pub fn new(input: &'a str) -> Self {
+        let (config, code, current_line) = get_dialect(input);
         Self {
-            input: input,
+            input: code,
             pos: 0,
             config,
-            current_line: number,
+            current_line,
         }
     }
 
@@ -62,7 +88,7 @@ impl<'a> Lexer<'a> {
         };
 
         // check specila symbols \r , \n, ;
-        if let Some(spanned_newline) = self.newline_symbols(ch) {
+        if let Some(spanned_newline) = self.special_symbols(ch) {
             return spanned_newline;
         }
 
@@ -107,7 +133,7 @@ impl<'a> Lexer<'a> {
         unexpected
     }
 
-    fn newline_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+    fn special_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
         let token_line = self.current_line;
         match ch {
             '\r' => {
@@ -137,10 +163,31 @@ impl<'a> Lexer<'a> {
                     line: token_line,
                 })
             }
+            ':' => {
+                self.pos += 1;
+                Some(SpannedToken {
+                    token: Token::UserFunc(FuncOp::Colon),
+                    line: token_line,
+                })
+            }
             ',' => {
                 self.pos += 1;
                 Some(SpannedToken {
                     token: Token::Comma,
+                    line: token_line,
+                })
+            }
+            '{' => {
+                self.pos += 1;
+                Some(SpannedToken {
+                    token: Token::UserFunc(FuncOp::OpenCurly),
+                    line: token_line,
+                })
+            }
+            '}' => {
+                self.pos += 1;
+                Some(SpannedToken {
+                    token: Token::UserFunc(FuncOp::CloseCurly),
                     line: token_line,
                 })
             }
@@ -244,15 +291,23 @@ impl<'a> Lexer<'a> {
                 })
             }
             '-' => {
-                let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'-' {
-                    self.pos += 2;
-                    Token::OpType(OpType::Decrement)
-                } else if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
-                    self.pos += 2;
-                    Token::OpType(OpType::DecEqual)
-                } else {
-                    self.pos += 1;
-                    Token::OpType(OpType::Minus)
+                let token = match bytes.get(self.pos..self.pos + 2) {
+                    Some(b"--") => {
+                        self.pos += 2;
+                        Token::OpType(OpType::Decrement)
+                    }
+                    Some(b"-=") => {
+                        self.pos += 2;
+                        Token::OpType(OpType::DecEqual)
+                    }
+                    Some(b"->") => {
+                        self.pos += 2;
+                        Token::UserFunc(FuncOp::Arrow)
+                    }
+                    _ => {
+                        self.pos += 1;
+                        Token::OpType(OpType::Minus)
+                    }
                 };
                 Some(SpannedToken {
                     token,
@@ -337,6 +392,7 @@ impl<'a> Lexer<'a> {
         }
 
         let text_str = &self.input[start..self.pos];
+        println!("{}", text_str);
         self.pos += 1;
 
         Some(SpannedToken {
@@ -358,6 +414,7 @@ impl<'a> Lexer<'a> {
                     || current_char == '+'
                     || current_char == '-'
                     || current_char == ','
+                    || current_char == '"'
                     || VALID_OPERATORS.contains(&current_char)
                 {
                     break;
@@ -380,6 +437,8 @@ impl<'a> Lexer<'a> {
                     Token::KeyWord(*kw_type)
                 } else if let Some(fw_token) = self.config.func_keywords.get(word_str) {
                     Token::FuncWord(*fw_token)
+                } else if let Some(vt_token) = self.config.type_keywords.get(word_str) {
+                    Token::VarType(*vt_token)
                 } else {
                     let type_token = match word_str {
                         "TRUE" => Token::Literal(Literal::Bool(true)),
@@ -400,7 +459,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn tokenize(&mut self) -> Vec<SpannedToken<'a>> {
+    pub fn tokenize(&mut self) -> (Vec<SpannedToken<'a>>, &SyntaxDict) {
         let mut tokens = Vec::new();
 
         loop {
@@ -411,11 +470,12 @@ impl<'a> Lexer<'a> {
             }
             tokens.push(spanned);
         }
-        tokens
+        let cfg = &self.config;
+        (tokens, cfg)
     }
     // This function is used for debug only
     pub fn debug_tokens(&mut self) {
-        let tokens = self.tokenize();
+        let (tokens, _) = self.tokenize();
         println!("\n=== DEBUG: Spanned Tokens ===\n");
         for (i, spanned) in tokens.iter().enumerate() {
             println!("{:3} | Line {:3} | {:?}", i, spanned.line, spanned.token);

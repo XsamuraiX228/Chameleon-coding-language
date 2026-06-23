@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
@@ -6,6 +7,8 @@ use crate::dialect::SyntaxDict;
 use crate::frontend::lexer::SpannedToken;
 use crate::frontend::token::{KeyWordType, Literal, OpType, Token};
 use crate::frontend::vm::compiler::opcodes::Opcode::{FAdd, FSub, IAdd, ISub};
+use crate::frontend::vm::compiler::types::DataType;
+use crate::frontend::vm::compiler::user_functions::UserFunction;
 
 use super::opcodes::Opcode;
 use super::types::{Constants, VarInfo};
@@ -17,6 +20,10 @@ pub struct Bparser<'a> {
     pub(super) variables: Vec<VarInfo<'a>>,
     pub(super) current_line: usize,
     pub(super) dialect: &'a SyntaxDict,
+    pub(crate) function_list: Vec<UserFunction<'a>>,
+    pub(super) function_regestry: HashMap<String, usize>,
+    pub return_type: DataType,
+    pub has_return: bool,
 }
 
 impl<'a> Bparser<'a> {
@@ -26,8 +33,12 @@ impl<'a> Bparser<'a> {
             bytecode: Vec::new(),
             constants: Vec::new(),
             variables: Vec::new(),
+            function_list: Vec::new(),
+            function_regestry: HashMap::new(),
             current_line: 1,
             dialect,
+            return_type: DataType::Int,
+            has_return: false,
         }
     }
 
@@ -68,6 +79,26 @@ impl<'a> Bparser<'a> {
         println!();
 
         println!("=======================\n");
+    }
+
+    pub(super) fn register_function(
+        &mut self,
+        function: UserFunction<'a>,
+    ) -> Result<(), ErrorHandler> {
+        if self.function_regestry.contains_key(&function.name) {
+            return Err(easy_error(
+                format!("Redefinition of function '{}'", function.name),
+                self.current_line,
+            ));
+        }
+        let func_id = self.function_list.len();
+
+        self.function_regestry
+            .insert(function.name.clone(), func_id);
+
+        self.function_list.push(function);
+
+        Ok(())
     }
 
     fn serialized(&self) -> Vec<u8> {
@@ -122,11 +153,17 @@ impl<'a> Bparser<'a> {
     pub fn byteparse_block(&mut self) -> Result<(), ErrorHandler> {
         match self.peek_token() {
             Some(Token::KeyWord(KeyWordType::Print)) => self.parse_print(),
+            Some(Token::KeyWord(KeyWordType::Println)) => self.parse_println(),
             Some(Token::KeyWord(KeyWordType::Let)) => self.parse_let(),
             Some(Token::KeyWord(KeyWordType::Input)) => self.parse_input(),
             Some(Token::KeyWord(KeyWordType::If)) => self.parse_if(),
             Some(Token::KeyWord(KeyWordType::While)) => self.parse_while(),
             Some(Token::KeyWord(KeyWordType::For)) => self.parse_for(),
+            Some(Token::KeyWord(KeyWordType::Func)) => {
+                self.parse_user_fc()?;
+                Ok(())
+            },
+            Some(Token::KeyWord(KeyWordType::Return)) => self.parse_return().map(|_| ()),
             Some(Token::Newline) => {
                 self.next_token();
                 Ok(())

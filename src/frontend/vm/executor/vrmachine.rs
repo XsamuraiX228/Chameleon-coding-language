@@ -1,51 +1,63 @@
 use std::collections::HashMap;
+use crate::frontend::vm::compiler::user_functions::UserFunction;
 
 use super::loader::deserialize;
-pub struct VirtualMachine {
-    pub(super) bytecode: Vec<u8>,
-    pub(super) constants: Vec<u64>,
-    pub(super) strings: Vec<String>,
-    pub(super) stack: Vec<u64>,
-    pub(super) globals: Vec<u64>,
-    pub(super) string_pool: HashMap<String, usize>,
-    pub(super) tos: Option<u64>,
-    pub(super) stos: Option<u64>,
-    pub(super) pc: usize,
+
+pub struct CallFrame {
+    pub bytecode: Vec<u8>,
+    pub locals: Vec<u64>,
+    pub pc: usize,
+}
+pub struct VmState {
+    pub constants: Vec<u64>,
+    pub strings: Vec<String>,
+    pub stack: Vec<u64>,
+    pub string_pool: HashMap<String, usize>,
+    pub tos: Option<u64>,
+    pub stos: Option<u64>,
 }
 
-impl VirtualMachine {
-    pub fn new(raw_code: Vec<u8>) -> Self {
+pub struct VirtualMachine<'a> {
+    pub(super) user_functions: Vec<UserFunction<'a>>, 
+    pub state: VmState,
+    pub(super) frames: Vec<CallFrame>,
+}
+
+impl<'a> VirtualMachine<'a> {
+    pub fn new(raw_code: Vec<u8>, user_functions: Vec<UserFunction<'a>>) -> Self {
         let (bytecode, constants, strings, string_pool, var_count) = deserialize(raw_code);
-        Self {
+
+        // Creating the main frame
+        let main_frame = CallFrame {
             bytecode,
+            locals: vec![0; var_count],
+            pc: 0
+        };
+
+        let new_vmstate = VmState {
             constants,
             strings,
-            stack: Vec::with_capacity(1024),
-            globals: vec![0; var_count],
+            stack: Vec::new(),
             string_pool,
-            pc: 0,
             tos: Some(0),
             stos: Some(0),
-        }
-    }
-    #[inline(always)]
-    pub(super) fn check_reg(&self) -> u8 {
-        match (self.tos, self.stos)  {
-            (Some(_), Some(_)) => 2,
-            (Some(_), None) => 1,
-            (None, None) => 0,
-            (None, Some(_)) => unreachable!("VM Error: STOS isn't empty, while TOS is empty!"),
-        }
-    }
+        };
 
+        Self {
+            user_functions,
+            state: new_vmstate,
+            frames: vec![main_frame], // Push main frame to CallStack
+        }
+    }
     pub fn run_bytecode(&mut self) -> Result<(), String> {
-        let len = self.bytecode.len();
+        while let Some(frame) = self.frames.last_mut() {
+            if frame.pc > frame.bytecode.len() {
+                self.frames.pop();
+                continue;
+            }
 
-        while self.pc < len {
-            let opcode = self.bytecode[self.pc];
-
+            let opcode = frame.bytecode[frame.pc];
             match opcode {
-                // 0x00: STOP
                 0x00 => break,
 
                 // Memory opcodes
@@ -63,17 +75,21 @@ impl VirtualMachine {
                 0x1E..=0x1F => self.execute_flow(opcode)?,
 
                 // IO opcodes
-                0x2D..=0x33 => self.execute_io(opcode)?,
+                0x2D..=0x37 => self.execute_io(opcode)?,
 
                 0x40 => {
-                    let func_id = self.bytecode[self.pc + 1];
+                    let func_id = frame.bytecode[frame.pc + 1];
                     self.execute_buildin(func_id)?;
-                },
+                }
+                
+                0x41..=0x42 => {
+                    self.execute_flow(opcode)?
+                }
 
                 _ => {
                     return Err(format!(
                         "Unknown opcode: 0x{:02X} at PC: {}",
-                        opcode, self.pc
+                        opcode, frame.pc
                     ));
                 }
             }

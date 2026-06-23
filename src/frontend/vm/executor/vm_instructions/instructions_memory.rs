@@ -1,38 +1,35 @@
 use crate::frontend::vm::executor::vrmachine::VirtualMachine;
 
-impl VirtualMachine {
+impl<'a> VirtualMachine<'a>{
     #[inline(always)]
     pub fn execute_memory(&mut self, opcode: u8) -> Result<(), String> {
+        let frame = self
+            .frames
+            .last_mut()
+            .ok_or("VM Error: No active call frame")?;
         match opcode {
             // 0x01: LOAD_CONST
             0x01 => {
-                let arg = self.get_arg();
-                // SAFETY: arg всегда в пределах constants.len(), т.к. индекс
-                // выставляется парсером при компиляции и не может быть некорректным
-                // для валидного байткода, сгенерированного Bparser'ом.
-                let value = unsafe { *self.constants.get_unchecked(arg as usize) };
-                self.push_u64(value)?;
-                self.pc += 3;
+                let arg = frame.get_arg();
+                let value = self.state.constants[arg as usize];
+                self.state.push_u64(value)?;
+                frame.pc += 3
             }
 
             // 0x02: LOAD_VAR
             0x02 => {
-                let arg = self.get_arg();
-                // SAFETY: arg ограничен var_count при компиляции
-                let value = unsafe { *self.globals.get_unchecked(arg as usize) };
-                self.push_u64(value)?;
-                self.pc += 3;
+                let arg = frame.get_arg();
+                let value = frame.locals[arg as usize];
+                self.state.push_u64(value)?;
+                frame.pc += 3;
             }
 
             // 0x03: STORE_VAR
             0x03 => {
-                let arg = self.get_arg();
-                let value = self.pop_u64()?;
-                // SAFETY: то же самое — arg всегда валиден для скомпилированного байткода
-                unsafe {
-                    *self.globals.get_unchecked_mut(arg as usize) = value;
-                }
-                self.pc += 3;
+                let arg = frame.get_arg();
+                let value = self.state.pop_u64()?;
+                frame.locals[arg as usize] = value;
+                frame.pc += 3;
             }
 
             _ => {

@@ -12,9 +12,18 @@ pub enum FuncKeyWord {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FuncOp {
+    Arrow,
+    OpenCurly,
+    CloseCurly,
+    Colon,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyWordType {
     Let,
     Print,
+    Println,
     Input,
     If,
     Then,
@@ -30,6 +39,8 @@ pub enum KeyWordType {
     And,
     Or,
     Not,
+    Func,
+    Return,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -124,20 +135,30 @@ impl CmpOp {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Literal<'a> {
     Ident(&'a str), // simple string
-    Text(&'a str),
     Number(i64),  // i64 number
+    Text(&'a str),
     Int(i64),
     Float(f64),
     Bool(bool),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum VarType {
+    Int,
+    Float,
+    Bool,
+    String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token<'a> {   
     KeyWord(KeyWordType),
     FuncWord(FuncKeyWord),
+    UserFunc(FuncOp),
     OpType(OpType),
     CmpOp(CmpOp),
     Literal(Literal<'a>),
+    VarType(VarType),
     Mark(&'a str), // e.g :loop 
     Semicolon,
     Comma,
@@ -200,6 +221,7 @@ impl fmt::Display for KeyWordType {
         let s = match self {
             KeyWordType::Let => "LET",
             KeyWordType::Print => "PRINT",
+            KeyWordType::Println => "PRINTLN",
             KeyWordType::Input => "INPUT",
             KeyWordType::If => "IF",
             KeyWordType::Then => "THEN",
@@ -215,6 +237,8 @@ impl fmt::Display for KeyWordType {
             KeyWordType::And => "AND",
             KeyWordType::Or => "OR",
             KeyWordType::Not => "NOT",
+            KeyWordType::Func => "FUNC",
+            KeyWordType::Return => "RETURN",
         };
         write!(f, "{}", s)
     }
@@ -235,15 +259,41 @@ impl fmt::Display for FuncKeyWord {
     }
 }
 
+impl fmt::Display for FuncOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            FuncOp::Arrow => "ARROW",
+            FuncOp::OpenCurly => "{",
+            FuncOp::CloseCurly => "}",
+            FuncOp::Colon => ":",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for VarType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            VarType::Int => "INT",
+            VarType::Float => "FLOAT",
+            VarType::Bool => "BOOL",
+            VarType::String => "STRING"
+        };
+        write!(f, "{}", s)
+    }
+}
+
 
 impl<'a> fmt::Display for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Token::KeyWord(kw) => write!(f, "KW({})", kw),
             Token::FuncWord(fw) => write!(f, "FW({}", fw),
+            Token::UserFunc(uw) => write!(f, "UF{}", uw),
             Token::OpType(op) => write!(f, "Op({})", op),
             Token::CmpOp(cmp) => write!(f, "Cmp({})", cmp),
             Token::Literal(lit) => write!(f, "{}", lit),
+            Token::VarType(vt) => write!(f, "{}", vt),
             Token::Mark(name) => write!(f, "Mark(:{})", name),
             Token::Newline => write!(f, "Newline"),
             Token::Semicolon => write!(f, "Semicolon"),

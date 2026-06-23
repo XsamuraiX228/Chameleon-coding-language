@@ -1,5 +1,5 @@
 use crate::diagnostic::diagnostic::{ErrorHandler, easy_error};
-use crate::frontend::token::{Literal, OpType, Token};
+use crate::frontend::token::{Literal, OpType, Token, VarType};
 
 use super::bparser::Bparser;
 use super::types::{Constants, DataType, VarInfo};
@@ -46,6 +46,17 @@ impl<'a> Bparser<'a> {
         }
     }
 
+    pub(super) fn find_function(&self, name: &str) -> Result<usize, ErrorHandler> {
+        if let Some(&id) = self.function_regestry.get(name) {
+            Ok(id)
+        } else {
+            Err(easy_error(
+                format!("Function '{}' not found", name),
+                self.current_line,
+            ))
+        }
+    }
+
     pub(super) fn get_num(&mut self) -> Result<i64, ErrorHandler> {
         match self.next_token() {
             Some(Token::Literal(Literal::Int(num))) => Ok(num),
@@ -67,6 +78,20 @@ impl<'a> Bparser<'a> {
                 "Expected variable name".to_string(),
                 self.current_line,
             )),
+        }
+    }
+
+    pub(super) fn get_type(&mut self) -> Result<DataType, ErrorHandler> {
+        match self.next_token() {
+            Some(Token::VarType(tp)) => {
+                match tp {
+                    VarType::Int => Ok(DataType::Int),
+                    VarType::Float => Ok(DataType::Float),
+                    VarType::Bool => Ok(DataType::Bool),
+                    VarType::String => Ok(DataType::String)
+                }
+            },
+            _ => Err(easy_error("Expected VarType token".to_string(), self.current_line)),
         }
     }
 

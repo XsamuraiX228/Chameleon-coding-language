@@ -86,15 +86,45 @@ impl<'a> Bparser<'a> {
                 DataType::Bool
             }
             Some(Token::Literal(Literal::Ident(name))) => {
-                let var_idx = self.find_variable(name)?;
-                self.to_u8_with_args(Opcode::LoadVar as u8, var_idx);
-                let data_type = self.get_var_type(var_idx);
-                data_type
+                if let Some(Token::OpType(OpType::LParen)) = self.peek_token() {
+                    let func_name = name;
+                    self.next_token();
+
+                    let mut arg_count = 0;
+                    while !matches!(self.peek_token(), Some(Token::OpType(OpType::RParen))) {
+                        self.expr_bp(0)?;  // парсим аргумент
+                        arg_count += 1;
+                        
+                        if matches!(self.peek_token(), Some(Token::Comma)) {
+                            self.next_token(); // consume ,
+                        }
+                    }
+                    self.next_token(); // consume )
+
+                    let func_id = self.find_function(func_name)?;
+                    let func = self.function_list.get(func_id).unwrap();
+
+                    if arg_count != func.args_amout {
+                        return Err(easy_error(
+                            format!("Expected {} args, got {}", func.args_amout, arg_count),
+                            self.current_line,
+                        ));
+                    }
+                    let return_type = func.return_type;
+                    self.to_u8_with_args(Opcode::Call as u8, func_id as u16);
+                    return Ok(return_type);
+                }
+                else {
+                    let var_idx = self.find_variable(name)?;
+                    self.to_u8_with_args(Opcode::LoadVar as u8, var_idx);
+                    let data_type = self.get_var_type(var_idx);
+                    data_type
+                }
             }
             Some(Token::Literal(Literal::Text(t))) => {
                 let str_idx = self.add_constant(Constants::Text(t.to_string()));
                 self.to_u8_with_args(Opcode::LoadConst as u8, str_idx);
-                DataType::Text
+                DataType::String
             }
             Some(Token::OpType(OpType::LParen)) => {
                 let inner_type = self.expr_bp(0)?;

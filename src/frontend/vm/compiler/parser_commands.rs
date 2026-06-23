@@ -30,7 +30,7 @@ impl<'a> Bparser<'a> {
         match var_type {
             DataType::Int => self.to_u8_with_args(Opcode::IInput as u8, var_id),
             DataType::Float => self.to_u8_with_args(Opcode::FInput as u8, var_id),
-            DataType::Text => self.to_u8_with_args(Opcode::SInput as u8, var_id),
+            DataType::String => self.to_u8_with_args(Opcode::SInput as u8, var_id),
             _ => return Err(easy_error("Bool expressions can't be an argument for Input".to_string(), self.current_line))
         }
         Ok(())
@@ -43,7 +43,19 @@ impl<'a> Bparser<'a> {
             DataType::Int => self.to_u8(Opcode::IPrint as u8),
             DataType::Float => self.to_u8(Opcode::FPrint as u8),
             DataType::Bool => self.to_u8(Opcode::BPrint as u8),
-            DataType::Text => self.to_u8(Opcode::SPrint as u8),
+            DataType::String => self.to_u8(Opcode::SPrint as u8),
+        }
+        Ok(())
+    }
+
+    pub(super) fn parse_println(&mut self) -> Result<(), ErrorHandler> {
+        self.next_token();
+        let expr_type = self.expr_bp(0)?;
+        match expr_type {
+            DataType::Int => self.to_u8(Opcode::IPrintln as u8),
+            DataType::Float => self.to_u8(Opcode::FPrintln as u8),
+            DataType::Bool => self.to_u8(Opcode::BPrintln as u8),
+            DataType::String => self.to_u8(Opcode::SPrintln as u8),
         }
         Ok(())
     }

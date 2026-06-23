@@ -58,11 +58,21 @@ pub enum Opcode {
     BPrint = 0x2F,
     SPrint = 0x30,
 
+    // Println
+    IPrintln = 0x31,
+    FPrintln = 0x32,
+    BPrintln = 0x33,
+    SPrintln = 0x34,
+
     // Input
-    IInput = 0x31,
-    FInput = 0x32,
-    SInput = 0x33,
+    IInput = 0x35,
+    FInput = 0x36,
+    SInput = 0x37,
 
     // CallNative - specila opcode to call buildin function
-    CallNative = 0x40
+    CallNative = 0x40,
+
+    // UserFunction
+    Call = 0x41,
+    Return = 0x42,
 }
