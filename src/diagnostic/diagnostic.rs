@@ -32,9 +32,9 @@ impl fmt::Display for ErrorHandler {
 
 pub fn hard_error(error_kw: String, kw_type: String, current_line: usize) -> ErrorHandler {
     let message = format!("Expected '{}' after {} block", error_kw, kw_type);
-    ErrorHandler::new(ErrorKind::Syntax, message, current_line)
+    ErrorHandler::new(ErrorKind::Syntax, message, current_line + 1)
 }
 
 pub fn easy_error(context: String, current_line: usize) -> ErrorHandler {
-    ErrorHandler::new(ErrorKind::Syntax, context, current_line)
+    ErrorHandler::new(ErrorKind::Syntax, context, current_line + 1)
 }

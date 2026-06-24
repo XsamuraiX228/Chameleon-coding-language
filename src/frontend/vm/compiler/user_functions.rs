@@ -24,6 +24,9 @@ impl<'a> Bparser<'a> {
 
         let f_name = self.get_name()?; // Get the name of our functions
 
+        // Generate unique id for every new function and pre-register it
+        let func_id = self.reserve_function(f_name)?;
+
         let global_bytecode = std::mem::take(&mut self.bytecode);
         let global_variables = std::mem::take(&mut self.variables);
 
@@ -63,6 +66,10 @@ impl<'a> Bparser<'a> {
             }
         }
         self.next_token(); // Skip )
+
+        if let Some(function) = self.function_list.get_mut(func_id) {
+            function.args_amout = agrs_count
+        }
 
         if !matches!(self.peek_token(), Some(Token::UserFunc(FuncOp::Arrow))) {
             return Err(easy_error(
@@ -108,11 +115,10 @@ impl<'a> Bparser<'a> {
         let local_vars = std::mem::take(&mut self.variables);
 
 
-        let current_func_return_type = self.return_type; // сохраняем для структуры
+        let current_func_return_type = self.return_type; 
         self.return_type = old_return_type;
         self.has_return = old_has_return;
-
-
+        
         let user_func = UserFunction {
             name: f_name.to_string(),
             function_bc,
@@ -121,10 +127,10 @@ impl<'a> Bparser<'a> {
             return_type: current_func_return_type,
         };
 
+        self.update_function_body(func_id, user_func);
+
         self.bytecode = global_bytecode;
         self.variables = global_variables;
-
-        self.register_function(user_func)?;
 
         Ok(return_type)
     }

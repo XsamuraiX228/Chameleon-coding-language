@@ -22,6 +22,7 @@ pub enum CallType {
     RandomFloat = 10,
 }
 
+#[derive(Debug)]
 pub struct VarInfo<'a> {
     pub name: &'a str,
     pub data_type: DataType,

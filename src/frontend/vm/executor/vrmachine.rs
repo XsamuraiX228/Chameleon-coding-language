@@ -23,6 +23,31 @@ pub struct VirtualMachine<'a> {
     pub(super) frames: Vec<CallFrame>,
 }
 
+use std::fmt;
+impl fmt::Display for CallFrame {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "CallFrame {{")?;
+        writeln!(f, "    pc: {}", self.pc)?;
+        writeln!(f, "    locals: {:?}", self.locals)?;
+        writeln!(f, "    bytecode_len: {}", self.bytecode.len())?;
+        write!(f, "}}")
+    }
+}
+
+impl<'a> fmt::Display for VirtualMachine<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "=== Virtual Machine ===")?;
+        writeln!(f, "Frames count: {}", self.frames.len())?;
+
+        for (idx, frame) in self.frames.iter().enumerate() {
+            writeln!(f, "\nFrame #{}:", idx)?;
+            writeln!(f, "{}", frame)?;
+        }
+
+        Ok(())
+    }
+}
+
 impl<'a> VirtualMachine<'a> {
     pub fn new(raw_code: Vec<u8>, user_functions: Vec<UserFunction<'a>>) -> Self {
         let (bytecode, constants, strings, string_pool, var_count) = deserialize(raw_code);
@@ -83,7 +108,12 @@ impl<'a> VirtualMachine<'a> {
                 }
                 
                 0x41..=0x42 => {
-                    self.execute_flow(opcode)?
+                    self.execute_flow(opcode)?;
+                    // println!("Frames: {}", self.frames.len());
+                    // for frame in self.frames.iter() {
+                    //     println!("{:}", frame)
+                    // }
+                    
                 }
 
                 _ => {

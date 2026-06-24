@@ -69,7 +69,7 @@ impl<'a> Bparser<'a> {
             println!("  [{}] = {}", i, v.name);
         }
 
-        println!("\n[Raw Bytecode] ({} bytes):", self.bytecode.len());
+        println!("\n[Raw Main Bytecode] ({} bytes):", self.bytecode.len());
         for (i, &b) in self.bytecode.iter().enumerate() {
             print!("{:02X} ", b);
             if (i + 1) % 16 == 0 {
@@ -78,27 +78,51 @@ impl<'a> Bparser<'a> {
         }
         println!();
 
+        for i in self.function_list.iter() {
+            println!("Function name: {}", i.name);
+            println!("Local vars: {}", i.local_vars.len());
+            for v in i.local_vars.iter() {
+                println!("{:?}", v);
+            }
+            println!(
+                "\nRaw Bytecode ({} bytes) for every user_function:",
+                i.function_bc.len()
+            );
+            for (idx, b) in i.function_bc.iter().enumerate() {
+                print!("{:02X} ", b);
+                if (idx + 1) % 16 == 0 {
+                    println!();
+                }
+            }
+            println!()
+        }
         println!("=======================\n");
     }
 
-    pub(super) fn register_function(
-        &mut self,
-        function: UserFunction<'a>,
-    ) -> Result<(), ErrorHandler> {
-        if self.function_regestry.contains_key(&function.name) {
+    pub(super) fn reserve_function(&mut self, name: &str) -> Result<usize, ErrorHandler> {
+        if self.function_regestry.contains_key(name) {
             return Err(easy_error(
-                format!("Redefinition of function '{}'", function.name),
+                format!("Redefinition of function '{}'", name),
                 self.current_line,
             ));
         }
+
         let func_id = self.function_list.len();
+        self.function_regestry.insert(name.to_string(), func_id);
 
-        self.function_regestry
-            .insert(function.name.clone(), func_id);
+        self.function_list.push(UserFunction {
+            name: name.to_string(),
+            function_bc: Vec::new(),
+            local_vars: Vec::new(),
+            args_amout: 0,
+            return_type: DataType::Int,
+        });
 
-        self.function_list.push(function);
+        Ok(func_id)
+    }
 
-        Ok(())
+    pub(super) fn update_function_body(&mut self, func_id: usize, function: UserFunction<'a>) {
+        self.function_list[func_id] = function;
     }
 
     fn serialized(&self) -> Vec<u8> {
@@ -162,7 +186,7 @@ impl<'a> Bparser<'a> {
             Some(Token::KeyWord(KeyWordType::Func)) => {
                 self.parse_user_fc()?;
                 Ok(())
-            },
+            }
             Some(Token::KeyWord(KeyWordType::Return)) => self.parse_return().map(|_| ()),
             Some(Token::Newline) => {
                 self.next_token();

@@ -92,14 +92,14 @@ impl<'a> Bparser<'a> {
 
                     let mut arg_count = 0;
                     while !matches!(self.peek_token(), Some(Token::OpType(OpType::RParen))) {
-                        self.expr_bp(0)?;  // парсим аргумент
+                        self.expr_bp(0)?;  
                         arg_count += 1;
                         
                         if matches!(self.peek_token(), Some(Token::Comma)) {
-                            self.next_token(); // consume ,
+                            self.next_token(); // Skip ,
                         }
                     }
-                    self.next_token(); // consume )
+                    self.next_token(); // Skip )
 
                     let func_id = self.find_function(func_name)?;
                     let func = self.function_list.get(func_id).unwrap();

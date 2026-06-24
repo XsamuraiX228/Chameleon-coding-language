@@ -1,37 +1,8 @@
-FN factorial(n: Int) -> Int {
-    LET result = 1
-    WHILE n > 1 THEN
-        LET result = result * n
-        LET n = n - 1
-    WEND
-    RETURN result
+FN double_val(n: Int) -> Int {
+    RETURN n * 2
 }
 
-FN calculate_circle_area(radius: Float) -> Float {
-    LET pi = 3.14159
-    RETURN pi * radius * radius
+FN double_and_add(n: Int, bonus: Int) -> Int {
+    LET doubled = double_val(n)
+    RETURN doubled + bonus
 }
-
-FN invert(flag: Bool) -> Bool {
-    RETURN NOT flag
-}
-
-// --- Вызовы и проверка результатов ---
-
-// 1. Тест Int & Cycles
-LET fact_res = factorial(5)
-PRINT "Factorial of 5: "
-PRINTLN fact_res
-
-// 2. Тест Float
-LET area_res = calculate_circle_area(2.5)
-PRINT "Area of circle (r=2.5): "
-PRINTLN area_res
-
-// 3. Тест Bool
-LET false_val = invert(TRUE)
-PRINT "Inverted TRUE: "
-PRINTLN false_val
-
-
-

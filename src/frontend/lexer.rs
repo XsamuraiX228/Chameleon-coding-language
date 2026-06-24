@@ -392,7 +392,6 @@ impl<'a> Lexer<'a> {
         }
 
         let text_str = &self.input[start..self.pos];
-        println!("{}", text_str);
         self.pos += 1;
 
         Some(SpannedToken {

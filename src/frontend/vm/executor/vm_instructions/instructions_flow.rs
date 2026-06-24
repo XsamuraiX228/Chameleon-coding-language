@@ -31,16 +31,12 @@ impl<'a> VirtualMachine<'a> {
                 if let Some(current_frame) = self.frames.last_mut() {
                     let func_id = current_frame.get_arg() as usize;
 
-                    // Сдвигаем PC текущего кадра вперед, чтобы после RETURN вернуться на следующую инструкцию
                     current_frame.pc += 3;
 
                     if let Some(func_data) = self.user_functions.get(func_id) {
-                        // 1. Выделяем locals под ВСЕ переменные функции (аргументы + LET)
+                        
                         let mut locals = vec![0; func_data.local_vars.len()];
 
-                        // 2. ИЗВЛЕКАЕМ АРГУМЕНТЫ ИЗ СТЕКА
-                        // Так как аргументы на стеке лежат в порядке: Arg1, Arg2... 
-                        // Снимать их через pop() нужно с конца к началу!
                         let args_count = func_data.args_amout;
                         for i in (0..args_count).rev() {
                             locals[i] = self.state.pop_u64()?;
@@ -48,7 +44,7 @@ impl<'a> VirtualMachine<'a> {
 
                         let new_frame = CallFrame {
                             bytecode: func_data.function_bc.clone(),
-                            locals, // Передаем инициализированные аргументами locals
+                            locals, 
                             pc: 0,
                         };
 
