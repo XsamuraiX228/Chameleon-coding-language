@@ -31,6 +31,7 @@ impl fmt::Display for CallFrame {
         writeln!(f, "    locals: {:?}", self.locals)?;
         writeln!(f, "    bytecode_len: {}", self.bytecode.len())?;
         write!(f, "}}")
+        
     }
 }
 
@@ -76,7 +77,7 @@ impl<'a> VirtualMachine<'a> {
     }
     pub fn run_bytecode(&mut self) -> Result<(), String> {
         while let Some(frame) = self.frames.last_mut() {
-            if frame.pc > frame.bytecode.len() {
+            if frame.pc >= frame.bytecode.len() {
                 self.frames.pop();
                 continue;
             }
@@ -113,8 +114,9 @@ impl<'a> VirtualMachine<'a> {
                     // for frame in self.frames.iter() {
                     //     println!("{:}", frame)
                     // }
-                    
                 }
+
+                
 
                 _ => {
                     return Err(format!(

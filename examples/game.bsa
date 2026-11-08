@@ -1,8 +1,15 @@
-FN double_val(n: Int) -> Int {
-    RETURN n * 2
+fn fib(n: int, a: int, b: int) -> int {
+    if n <= 0 then
+        return a
+    end
+
+    if n == 1 then
+        return b
+    end
+
+    return fib(n - 1, b, a + b)
 }
 
-FN double_and_add(n: Int, bonus: Int) -> Int {
-    LET doubled = double_val(n)
-    RETURN doubled + bonus
-}
+let ans = fib(92, 0, 1)
+print("The answer is: ")
+print(ans)

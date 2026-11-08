@@ -28,7 +28,6 @@ pub enum KeyWordType {
     If,
     Then,
     Else,
-    Goto,
     While,
     Wend,
     For,
@@ -164,7 +163,7 @@ pub enum Token<'a> {
     Comma,
     Newline, // \n
     EOF,
-    Unexpected(char),
+    Unexpected(&'a str),
 }
 
 // token.rs
@@ -226,7 +225,6 @@ impl fmt::Display for KeyWordType {
             KeyWordType::If => "IF",
             KeyWordType::Then => "THEN",
             KeyWordType::Else => "ELSE",
-            KeyWordType::Goto => "GOTO",
             KeyWordType::While => "WHILE",
             KeyWordType::Wend => "WEND",
             KeyWordType::For => "FOR",

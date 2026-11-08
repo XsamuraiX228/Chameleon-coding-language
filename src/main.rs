@@ -18,21 +18,9 @@ fn main() -> Result<(), String> {
             unreachable!()
         }
     };
-
-    run_rvmpipeline(&code)?;
-
-    // let program = r#"
-    //     LET I = 0
-    //     LET SUM = 0
-    //     WHILE I <= 1000000 THEN
-    //         LET SUM = SUM + I 
-    //         LET I = I + 1
-    //     WEND
-    //     PRINT SUM
-    // "#;
-
-    // run_pure_benchmark(program)?;
-    
+    if let Err(t) = run_rvmpipeline(&code) {
+        println!("{}", t)
+    } 
     Ok(())
 }
 

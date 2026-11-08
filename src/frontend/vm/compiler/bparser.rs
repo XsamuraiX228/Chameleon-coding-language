@@ -4,7 +4,7 @@ use std::vec::IntoIter;
 
 use crate::diagnostic::diagnostic::{ErrorHandler, easy_error, hard_error};
 use crate::dialect::SyntaxDict;
-use crate::frontend::lexer::SpannedToken;
+use crate::frontend::lexer_v2::lexer_v2::SpannedToken;
 use crate::frontend::token::{KeyWordType, Literal, OpType, Token};
 use crate::frontend::vm::compiler::opcodes::Opcode::{FAdd, FSub, IAdd, ISub};
 use crate::frontend::vm::compiler::types::DataType;
@@ -59,17 +59,26 @@ impl<'a> Bparser<'a> {
     pub fn debug_dump(&self) {
         println!("\n=== PARSER DEBUG INFO ===");
 
-        println!("\n[Constants] ({} items):", self.constants.len());
+        // --- Константы ---
+        println!("\n--- Constants Pool ({} items) ---", self.constants.len());
         for (i, c) in self.constants.iter().enumerate() {
             println!("  [{}] = {:?}", i, c);
         }
 
-        println!("\n[Variables] ({} items):", self.variables.len());
+        // --- Глобальные переменные ---
+        println!(
+            "\n--- Global Variables ({} items) ---",
+            self.variables.len()
+        );
         for (i, v) in self.variables.iter().enumerate() {
             println!("  [{}] = {}", i, v.name);
         }
 
-        println!("\n[Raw Main Bytecode] ({} bytes):", self.bytecode.len());
+        // --- Глобальный байт-код ---
+        println!(
+            "\n--- Raw Main Bytecode ({} bytes) ---",
+            self.bytecode.len()
+        );
         for (i, &b) in self.bytecode.iter().enumerate() {
             print!("{:02X} ", b);
             if (i + 1) % 16 == 0 {
@@ -78,25 +87,31 @@ impl<'a> Bparser<'a> {
         }
         println!();
 
-        for i in self.function_list.iter() {
-            println!("Function name: {}", i.name);
-            println!("Local vars: {}", i.local_vars.len());
-            for v in i.local_vars.iter() {
-                println!("{:?}", v);
+        // --- Функции пользователя ---
+        println!("\n=== USER FUNCTIONS ===");
+        if self.function_list.is_empty() {
+            println!("  (None)");
+        }
+
+        for func in self.function_list.iter() {
+            println!("\n> Function: {}", func.name);
+            println!("  Local vars ({}):", func.local_vars.len());
+            for (idx, v) in func.local_vars.iter().enumerate() {
+                println!("    [{}] {:?}", idx, v);
             }
-            println!(
-                "\nRaw Bytecode ({} bytes) for every user_function:",
-                i.function_bc.len()
-            );
-            for (idx, b) in i.function_bc.iter().enumerate() {
+
+            println!("  Bytecode ({} bytes):", func.function_bc.len());
+            print!("    ");
+            for (idx, b) in func.function_bc.iter().enumerate() {
                 print!("{:02X} ", b);
-                if (idx + 1) % 16 == 0 {
-                    println!();
+                if (idx + 1) % 16 == 0 && idx + 1 < func.function_bc.len() {
+                    print!("\n    ");
                 }
             }
-            println!()
+            println!();
         }
-        println!("=======================\n");
+
+        println!("\n=======================\n");
     }
 
     pub(super) fn reserve_function(&mut self, name: &str) -> Result<usize, ErrorHandler> {
@@ -229,9 +244,10 @@ impl<'a> Bparser<'a> {
             None => Ok(()),
             Some(t) => {
                 let token_clone = t.clone();
+                let current_line = self.peek_line().unwrap();
                 Err(easy_error(
                     format!("Unexpected token: {:?}", token_clone),
-                    self.current_line,
+                    current_line,
                 ))
             }
         }

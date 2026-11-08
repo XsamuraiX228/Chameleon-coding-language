@@ -176,6 +176,12 @@ impl<'a> Bparser<'a> {
             Some(Token::FuncWord(fw)) => {
                 self.parse_func(fw)?
             }
+            Some(Token::Unexpected(bad)) => {
+                return Err(easy_error(
+                    format!("Invalid token in expression: {}", bad),
+                    self.peek_line().unwrap(),
+                ));
+            }
             _ => {
                 return Err(easy_error(
                     "Expected number or variable".to_string(),

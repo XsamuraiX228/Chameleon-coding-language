@@ -9,9 +9,13 @@ impl<'a> Bparser<'a> {
         self.lexer.peek().map(|spanned| &spanned.token)
     }
 
+    pub(super) fn peek_line(&mut self) -> Option<usize> {
+        self.lexer.peek().map(|spanned| spanned.current_line)
+    }
+
     pub(super) fn next_token(&mut self) -> Option<Token<'a>> {
         let next_token = self.lexer.next()?;
-        self.current_line = next_token.line;
+        self.current_line = next_token.current_line;
         Some(next_token.token)
     }
 

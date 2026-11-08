@@ -18,27 +18,21 @@ pub struct Lexer<'a> {
 }
 
 pub fn get_dialect<'a>(input: &'a str) -> (SyntaxDict, &'a str, usize) {
-    let mut config = SyntaxDict::get_dict("ENGLISH");
-
-    let mut current_line = 0;
+    let mut config = SyntaxDict::get_dict("English");
     let mut code = input;
+    let mode_line = input.lines().next().unwrap().trim();
 
-    if let Some(first_line) = input.lines().next() {
-        let trimmed = first_line.trim();
-        if trimmed.starts_with("#mode") {
-            current_line += 1;
-            if let (Some(start_quote), Some(end_quote)) = (trimmed.find('"'), trimmed.rfind('"')) {
-                if start_quote != end_quote {
-                    let dict_name = &trimmed.trim()[start_quote + 1..end_quote];
-                    config = SyntaxDict::get_dict(dict_name);
-                }
-            }
-            if let Some(pos) = input.find('\n') {
-                code = &input[pos + 1..];
-            }
+    if let (Some(start_quote), Some(end_quote)) = (mode_line.find('"'), mode_line.rfind('"')) {
+        if start_quote != end_quote {
+            let dict_name = &mode_line.trim()[start_quote + 1..end_quote];
+            config = SyntaxDict::get_dict(dict_name);
+        }
+        if let Some(pos) = input.find('\n') {
+            code = &input[pos + 1..];
         }
     }
-    (config, code, current_line)
+    println!("{}", code);
+    (config, code, 1)
 }
 
 impl<'a> Lexer<'a> {
@@ -63,11 +57,10 @@ impl<'a> Lexer<'a> {
         if self.pos >= self.input.len() {
             return None;
         }
-        // Безопасно берем следующий символ, учитывая UTF-8
         self.input[self.pos..].chars().next()
     }
 
-    fn next_token(&mut self) -> SpannedToken<'a> {
+    fn next_token(&mut self, bytes: &[u8]) -> SpannedToken<'a> {
         self.skip_whitespace();
 
         if self.pos > self.input.len() {
@@ -86,61 +79,52 @@ impl<'a> Lexer<'a> {
                 };
             }
         };
-
         // check specila symbols \r , \n, ;
-        if let Some(spanned_newline) = self.special_symbols(ch) {
+        if let Some(spanned_newline) = self.special_symbols(ch, bytes) {
             return spanned_newline;
         }
 
         // check comparative symbols =, ==, !=, <, >, <=, >=
-        if let Some(spanned_cmp) = self.comparative_symbols(ch) {
+        if let Some(spanned_cmp) = self.comparative_symbols(ch, bytes) {
             return spanned_cmp;
         }
 
         // check math symbols in VALID_OPERATORS
-        if let Some(spanned_math) = self.math_symbols(ch) {
+        if let Some(spanned_math) = self.math_symbols(ch, bytes) {
             return spanned_math;
         }
 
         // check // symbol for comments
-        if let Some(spanned_comments) = self.comments_symbol(ch) {
+        if let Some(spanned_comments) = self.comments_symbol(ch, bytes) {
             return spanned_comments;
         }
 
         // check for numbers
-        if let Some(spanned_num) = self.number(ch) {
+        if let Some(spanned_num) = self.number(ch, bytes) {
             return spanned_num;
         }
 
         // check for string
-        if let Some(spanned_string) = self.string(ch) {
+        if let Some(spanned_string) = self.string(ch, bytes) {
             return spanned_string;
         }
 
         // check for Keywords
-        if let Some(spanned_keyword) = self.keyword(ch) {
-            return spanned_keyword;
+        if let Some(spanned_keyword) = self.keyword() {
+            return spanned_keyword
         }
-
-        let unexpected = SpannedToken {
-            token: Token::Unexpected(ch),
-            line: self.current_line,
-        };
-
-        // Продвигаем курсор вперед, чтобы не зациклиться на ошибке
         self.pos += ch.len_utf8();
 
-        unexpected
+        SpannedToken {token: Token::EOF, line: self.current_line}
     }
 
-    fn special_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+    fn special_symbols(&mut self, ch: char, bytes: &[u8]) -> Option<SpannedToken<'a>> {
         let token_line = self.current_line;
         match ch {
             '\r' => {
                 self.pos += 1;
-                let bytes = self.input.as_bytes();
-                if self.pos < self.input.len() && bytes[self.pos] == b'\n' {
-                    self.pos += 1; // \r\n 
+                if self.pos < bytes.len() && bytes[self.pos] == b'\n' {
+                    self.pos += 1; // \r\n
                 }
                 self.current_line += 1;
                 Some(SpannedToken {
@@ -195,9 +179,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn comparative_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+    fn comparative_symbols(&mut self, ch: char, bytes: &[u8]) -> Option<SpannedToken<'a>> {
         let token_line = self.current_line;
-        let bytes = self.input.as_bytes();
         match ch {
             '=' => {
                 let token = if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'=' {
@@ -255,9 +238,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn math_symbols(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+    fn math_symbols(&mut self, ch: char, bytes: &[u8]) -> Option<SpannedToken<'a>> {
         let token_line = self.current_line;
-        let bytes = self.input.as_bytes();
         match ch {
             op if VALID_OPERATORS.contains(&op) => {
                 self.pos += 1;
@@ -318,10 +300,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn comments_symbol(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+    fn comments_symbol(&mut self, ch: char, bytes: &[u8]) -> Option<SpannedToken<'a>> {
         let token_line = self.current_line;
-        let bytes = self.input.as_bytes();
-
         match ch {
             '/' => {
                 if self.pos + 1 < bytes.len() && bytes[self.pos + 1] == b'/' {
@@ -329,7 +309,7 @@ impl<'a> Lexer<'a> {
                     while self.pos < bytes.len() && bytes[self.pos] != b'\n' {
                         self.pos += 1;
                     }
-                    return Some(self.next_token());
+                    return Some(self.next_token(bytes));
                 }
                 self.pos += 1;
                 Some(SpannedToken {
@@ -341,49 +321,57 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn number(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+    fn number(&mut self, ch: char, bytes: &[u8]) -> Option<SpannedToken<'a>> {
         if !ch.is_ascii_digit() {
             return None;
         }
 
         let mut is_float = false;
+        let mut has_error = false;
+        let mut dot_counter = 0;
         let token_line = self.current_line;
-        let bytes = self.input.as_bytes();
         let start = self.pos;
 
-        while self.pos < bytes.len()
-            && ((bytes[self.pos] as char).is_ascii_digit() || bytes[self.pos] == b'.')
+        while self.pos < bytes.len() && ((bytes[self.pos] as char).is_ascii_digit() || bytes[self.pos] == b'.')
         {
             if bytes[self.pos] == b'.' {
-                is_float = true;
+                if dot_counter == 0 {
+                    is_float = true;
+                    dot_counter += 1;
+                } else {
+                    has_error = true;
+                }
             }
-            self.pos += 1;
+            self.pos += 1
         }
 
         let num_str = &self.input[start..self.pos];
-        if !is_float {
-            let int_number = num_str.parse::<i64>().unwrap();
-            return Some(SpannedToken {
-                token: Token::Literal(Literal::Int(int_number)),
-                line: token_line,
-            });
+
+        if has_error {
+            return Some(SpannedToken { token: Token::Unexpected(num_str), line: token_line });
         } else {
-            let float_number = num_str.parse::<f64>().unwrap();
-            return Some(SpannedToken {
-                token: Token::Literal(Literal::Float(float_number)),
-                line: token_line,
-            });
+            if !is_float {
+                let int_number = num_str.parse::<i64>().unwrap();
+                return Some(SpannedToken {
+                    token: Token::Literal(Literal::Int(int_number)),
+                    line: token_line,
+                });
+            } else {
+                let float_number = num_str.parse::<f64>().unwrap();
+                return Some(SpannedToken {
+                    token: Token::Literal(Literal::Float(float_number)),
+                    line: token_line,
+                });
+            }
         }
     }
 
-    fn string(&mut self, ch: char) -> Option<SpannedToken<'a>> {
+    fn string(&mut self, ch: char, bytes: &[u8]) -> Option<SpannedToken<'a>> {
         if ch != '"' {
             return None;
         }
 
         let token_line = self.current_line;
-        let bytes = self.input.as_bytes();
-
         self.pos += 1;
         let start = self.pos;
 
@@ -423,46 +411,43 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn keyword(&mut self, ch: char) -> Option<SpannedToken<'a>> {
-        let token_line = self.current_line;
-        match ch {
-            _ => {
-                let start = self.pos;
-                self.skip_until_delimiter();
-                let word_str = &self.input[start..self.pos];
-                // println!("{}", word_str);
-                // println!("{:?}", self.config.keywords.get(word_str));
-                let key_token = if let Some(kw_type) = self.config.keywords.get(word_str) {
-                    Token::KeyWord(*kw_type)
-                } else if let Some(fw_token) = self.config.func_keywords.get(word_str) {
-                    Token::FuncWord(*fw_token)
-                } else if let Some(vt_token) = self.config.type_keywords.get(word_str) {
-                    Token::VarType(*vt_token)
-                } else {
-                    let type_token = match word_str {
-                        "TRUE" => Token::Literal(Literal::Bool(true)),
-                        "FALSE" => Token::Literal(Literal::Bool(false)),
-                        "," => Token::Comma,
-                        _ => Token::Literal(Literal::Ident(word_str)),
-                    };
-                    return Some(SpannedToken {
-                        token: type_token,
-                        line: token_line,
-                    });
-                };
-                Some(SpannedToken {
-                    token: key_token,
-                    line: token_line,
-                })
-            }
+    fn classify_literal(&self, word_str: &'a str) -> Token<'a> {
+        if let Some(result) = self.config.bool_keywords.get(word_str) {
+            return Token::Literal(Literal::Bool(*result));
+        } else {
+            return Token::Literal(Literal::Ident(word_str));
         }
+    }
+
+    fn keyword(&mut self) -> Option<SpannedToken<'a>> {
+        let line = self.current_line;
+        let start = self.pos;
+        self.skip_until_delimiter();
+        let word_str = &self.input[start..self.pos];
+    
+        // Пропускаем пустые строки
+        if word_str.is_empty() {
+            return None;
+        }
+    
+        let token = if let Some(&kw) = self.config.keywords.get(word_str) {
+            Token::KeyWord(kw)
+        } else if let Some(&fw) = self.config.func_keywords.get(word_str) {
+            Token::FuncWord(fw)
+        } else if let Some(&vt) = self.config.type_keywords.get(word_str) {
+            Token::VarType(vt)
+        } else {
+            self.classify_literal(word_str)
+        };
+    
+        Some(SpannedToken { token, line })
     }
 
     pub fn tokenize(&mut self) -> (Vec<SpannedToken<'a>>, &SyntaxDict) {
         let mut tokens = Vec::new();
-
+        let bytes = self.input.as_bytes();
         loop {
-            let spanned = self.next_token();
+            let spanned = self.next_token(bytes);
             if let Token::EOF = spanned.token {
                 tokens.push(spanned);
                 break;
@@ -472,13 +457,13 @@ impl<'a> Lexer<'a> {
         let cfg = &self.config;
         (tokens, cfg)
     }
-    // This function is used for debug only
-    pub fn debug_tokens(&mut self) {
-        let (tokens, _) = self.tokenize();
-        println!("\n=== DEBUG: Spanned Tokens ===\n");
-        for (i, spanned) in tokens.iter().enumerate() {
-            println!("{:3} | Line {:3} | {:?}", i, spanned.line, spanned.token);
-        }
-        println!("\nTotal tokens: {}", tokens.len());
+}
+
+// This function is used for debug only
+pub fn debug_tokens(tokens: &[SpannedToken]) {
+    println!("\n=== DEBUG: Spanned Tokens ===\n");
+    for (i, spanned) in tokens.iter().enumerate() {
+        println!("{:3} | Line {:3} | {:?}", i, spanned.line, spanned.token);
     }
+    println!("\nTotal tokens: {}", tokens.len());
 }
