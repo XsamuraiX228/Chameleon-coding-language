@@ -1,6 +1,27 @@
 use crate::frontend::token::Literal;
 use crate::frontend::token::Token;
 use crate::frontend::lexer_v2::lexer_v2::LexerV2;
+use crate::dialect::SyntaxDict;
+
+pub fn get_dialect<'a>(input: &'a str) -> (SyntaxDict, &'a str, usize) {
+    // split the first line from the rest, without panicking on empty input
+    let (first_line, rest) = input.split_once('\n').unwrap_or((input, ""));
+
+    // accept only the exact form:  #mode "Name"
+    let dialect_name = first_line
+        .trim()
+        .strip_prefix("#mode")
+        .map(str::trim)
+        .and_then(|s| s.strip_prefix('"'))
+        .and_then(|s| s.strip_suffix('"'));
+
+    match dialect_name {
+        // directive found: use that dialect, skip its line, start counting at line 2
+        Some(name) => (SyntaxDict::get_dict(name), rest, 2),
+        // no directive: default dialect, keep all the code, start at line 1
+        None => (SyntaxDict::get_dict("English"), input, 1),
+    }
+}
 
 impl<'a> LexerV2<'a> {
     // Pick the symbol

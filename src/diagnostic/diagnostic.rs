@@ -30,8 +30,8 @@ impl fmt::Display for ErrorHandler {
     }
 }
 
-pub fn lexical_error(unexpected_char: String, expected_char: String, current_line: usize) -> ErrorHandler {
-    let message = format!("Expected {} after {}", unexpected_char, expected_char);
+pub fn lexical_error(unexpected_char: String, expected_char: String, current_line: usize, current_col: usize) -> ErrorHandler {
+    let message = format!("Unexpected {} after {} on line {} at column {}", unexpected_char, expected_char, current_line, current_col);
     ErrorHandler::new(ErrorKind::Lexical, message, current_line)
 }
 

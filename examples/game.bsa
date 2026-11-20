@@ -10,6 +10,9 @@ fn fib(n: int, a: int, b: int) -> int {
     return fib(n - 1, b, a + b)
 }
 
-let ans = fib(92, 0, 1)
+let k = 12abc
+
+let ans_1 = fib(92, 0, 1)
 print("The answer is: ")
-print(ans)
+print(ans_1)
+// wow

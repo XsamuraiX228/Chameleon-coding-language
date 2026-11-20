@@ -188,7 +188,6 @@ impl SyntaxDict {
 
     pub fn get_dict(name_of_dict: &str) -> SyntaxDict {
         match name_of_dict {
-            "English" => Self::default_english(),
             "Russian" => Self::russian_style(),
             // "JAPANESE" => Self::japanese_style(),
             _ => Self::default_english(),

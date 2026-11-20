@@ -26,10 +26,10 @@ impl<'a> LexerV2<'a> {
             },
             // If the symbol is a random character, throw an Error
             Some((_, ch)) => {
-                return Err(lexical_error(ch.to_string(), "newline".to_string(), self.current_line));
+                return Err(lexical_error(ch.to_string(), "newline".to_string(), self.current_line, self.current_col));
             },
-            _ => {
-                return Err(lexical_error("EOF".to_string(), "newline".to_string(), self.current_line));
+            None => {
+                return Ok(SpannedToken { token: Token::EOF, current_line: start_line, current_col: start_col });
             }
         }
         Ok(SpannedToken::create_token(Token::Newline, start_line, start_col))
@@ -60,7 +60,7 @@ impl<'a> LexerV2<'a> {
         // check if number has non-digit character
         if let Some((_, ch)) = self.peek()  {
             if ch.is_ascii_alphabetic() || ch == '_' {
-                return Err(lexical_error(ch.to_string(), "digit (0-9)".to_string(), self.current_line));
+                return Err(lexical_error(ch.to_string(), "digit (0-9)".to_string(), self.current_line, self.current_col));
             }
         }
 
@@ -95,7 +95,7 @@ impl<'a> LexerV2<'a> {
                     return Ok(SpannedToken::create_token(Token::Literal(Literal::Text(string)), start_line, start_col));
                 },
                 Some((_, '\r' | '\n')) => {
-                    return Err(lexical_error("newline".to_string(), "letter".to_string(), self.current_line));
+                    return Err(lexical_error("newline".to_string(), "letter".to_string(), self.current_line, self.current_col));
                 },
                 _ => {
                     self.next();

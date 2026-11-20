@@ -1,7 +1,7 @@
 use crate::dialect::SyntaxDict;
 use crate::frontend::token::Token;
-use crate::frontend::lexer::get_dialect;
-
+use crate::frontend::lexer_v2::lexer_v2_utils::utils::get_dialect;
+use crate::diagnostic::diagnostic::{ErrorHandler, lexical_error};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpannedToken<'a> {
@@ -37,74 +37,39 @@ impl<'a> LexerV2<'a>  {
     }
 
     // Main function, which return a token
-    pub fn next_token(&mut self) -> SpannedToken<'a> {
+    pub fn next_token(&mut self) -> Result<SpannedToken<'a>, ErrorHandler> {
         // skip whitespaces, until we reach non-whitespace character
         self.skip_whitespace();
 
         // grab first non-whitespace character and match it to helper functions
         let Some((_, ch)) = self.peek() else {
-            return SpannedToken { token: Token::EOF, current_line: self.current_line, current_col: self.current_col };
+            return Ok(SpannedToken { token: Token::EOF, current_line: self.current_line, current_col: self.current_col });
         };
 
         match ch {
-            '\r' | '\n' => {
-                // newline
-                let token = self.newline_token().unwrap();
-                return token;
-            },
-            '0'..='9' => {
-                // numbers
-                let token = self.number_token().unwrap();
-                return token;
-            },
-            '"' => {
-                // strings
-                let token = self.string_token().unwrap();
-                return token;
-            }
-            'a'..='z' | 'A'..='Z' => {
-                // keywords, function words, indents.
-                let token = self.keyword_token().unwrap();
-                return token;
-            }
-            '=' | '<' | '>' | '!' => {
-                let token = self.comparative_tokens().unwrap();
-                return token;
-            }
-            '+' | '-' | '*' | '^' | '%' => {
-                let token = self.math_tokens().unwrap();
-                return token;
-            }
-            '/' => {
-                let token = self.comment_tokens().unwrap();
-                return token;
-            }
-            '(' | ')' | '{' | '}' | ';' | ':' | ',' => {
-                let token = self.symbol_tokens().unwrap();
-                return token
-            }
-            _ => {
-                println!("")
+            '\r' | '\n'                  => self.newline_token(),
+            '0'..='9'                    => self.number_token(),
+            '"'                          => self.string_token(),
+            'a'..='z' | 'A'..='Z' | '_'  => self.keyword_token(),
+            '=' | '<' | '>' | '!'        => self.comparative_tokens(),
+            '+' | '-' | '*' | '^' | '%'  => self.math_tokens(),
+            '/'                          => self.comment_tokens(),
+            '(' | ')' | '{' | '}' | ';' | ':' | ',' => self.symbol_tokens(),
+            unexpected_char => {
+                return Err(lexical_error(unexpected_char.to_string(), "Unexpected char".to_string(), self.current_line, self.current_col));
             }
         }
-    
-
-        SpannedToken::create_token(Token::EOF, self.current_line, self.current_col)
     }
 
-
-    pub fn tokenizer(&mut self) -> (Vec<SpannedToken<'a>>, &SyntaxDict) {
+    pub fn tokenizer(&mut self) -> Result<(Vec<SpannedToken<'a>>, &SyntaxDict), ErrorHandler> {
         let mut tokens = Vec::new();
         loop {
-            let token = self.next_token();
-            if token.token == Token::EOF {
-                tokens.push(token);
-                break;
-            }
+            let token = self.next_token()?;
+            let done = token.token == Token::EOF;
             tokens.push(token);
+            if done { break; }
         }
-        let config = &self.config;
-        (tokens, config)
+        Ok((tokens, &self.config))
     }
 
 }

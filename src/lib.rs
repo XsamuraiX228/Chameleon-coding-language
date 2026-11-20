@@ -11,7 +11,7 @@ pub mod io;
 /// Run the code (Preprocessor -> Lexer -> Compiler -> Executor)
 pub fn run_rvmpipeline(raw_code: &str) -> Result<(), String> {
     let mut lexer_v2 = LexerV2::new(raw_code);
-    let (tokens, cfg) = lexer_v2.tokenizer();
+    let (tokens, cfg) = lexer_v2.tokenizer().map_err(|e| format!("{}", e))?;
     debug_tokens(&tokens);
 
     let mut parser = Bparser::new(tokens, &cfg);
